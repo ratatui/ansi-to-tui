@@ -1,5 +1,5 @@
 [package]
-name = "ansitui"
+name = "ansi-to-tui"
 version = "0.1.0"
 edition = "2018"
 
