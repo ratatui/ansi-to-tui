@@ -218,7 +218,7 @@ pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
     //     println!("{:?}", span);
     // }
 
-    println!("bufferlen {}", buffer.len());
-    println!("{:?}", &buffer);
+    // println!("bufferlen {}", buffer.len());
+    // println!("{:?}", &buffer);
     Ok(buffer.into())
 }

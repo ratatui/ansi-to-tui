@@ -19,8 +19,8 @@ use unicode_width::UnicodeWidthStr;
 
 use ansi::ansi_to_text;
 pub fn main() {
-    let mut file = std::fs::File::open("log").unwrap();
-    // let mut file = std::fs::File::open("archlinux.ascii").unwrap();
+    // let mut file = std::fs::File::open("").unwrap();
+    let mut file = std::fs::File::open("archlinux.ascii").unwrap();
     let mut buffer: Vec<u8> = Vec::new();
     let mut backend = CrosstermBackend::new(io::stdout());
     let mut tmp_buffer = Buffer::empty(Rect::new(0, 0, 500, 500));
@@ -29,7 +29,7 @@ pub fn main() {
     let _text = ansi_to_text(buffer).unwrap();
     // println!("{:?}", _text);
 
-    Paragraph::new(_text).render(Rect::new(1, 1, 10, 10), &mut tmp_buffer);
+    Paragraph::new(_text).render(Rect::new(1, 1, 50, 50), &mut tmp_buffer);
     write_buffer_to_console(&mut backend, &mut tmp_buffer).unwrap();
 }
 
