@@ -6,3 +6,5 @@ mod error;
 mod stack;
 mod style;
 mod tests;
+
+pub use ansi::ansi_to_text;
