@@ -4,5 +4,5 @@ pub enum Error {
     StackLocked,
     StackUnlocked,
     InvalidAnsi,
-    TempError,
+    UnknownColor,
 }

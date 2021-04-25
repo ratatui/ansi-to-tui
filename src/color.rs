@@ -45,22 +45,3 @@ impl From<AnsiColor> for Color {
         }
     }
 }
-// pub fn ansi_to_color(ansi: u8) -> AnsiColor {
-//     match ansi {
-//         30 | 40 => AnsiColor::Black,
-//         31 | 41 => AnsiColor::Red,
-//         32 | 42 => AnsiColor::Green,
-//         33 | 43 => AnsiColor::Yellow,
-//         34 | 44 => AnsiColor::Blue,
-//         35 | 45 => AnsiColor::Gray,
-//         90 | 100 => AnsiColor::DarkGray,
-//         91 | 101 => AnsiColor::LightRed,
-//         92 | 102 => AnsiColor::LightGreen,
-//         93 | 103 => AnsiColor::LightYellow,
-//         94 | 104 => AnsiColor::LightBlue,
-//         95 | 105 => AnsiColor::LightMagenta,
-//         96 | 106 => AnsiColor::LightCyan,
-//         97 | 107 => AnsiColor::White,
-//         _ => AnsiColor::Black,
-//     }
-// }

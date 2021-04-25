@@ -1,7 +1,13 @@
 #[cfg(test)]
 #[test]
 fn test_color() {
-    use crate::ansi_to_color;
+    use crate::stack::Stack;
     use tui::style::Color;
-    assert_eq!(ansi_to_color(31_u8), Color::Red);
+    let mut stack: Stack<u8> = Stack::new();
+    stack.push(30);
+    assert_eq!(stack.parse_color().unwrap(), Color::Indexed(30));
+    stack.push(30);
+    stack.push(3);
+    stack.push(55);
+    assert_eq!(stack.parse_color().unwrap(), Color::Rgb(30, 3, 55));
 }

@@ -30,7 +30,7 @@ impl Stack<u8> {
             let r = self.pop().unwrap();
             color = Color::Rgb(r, g, b);
         } else {
-            return Err(Error::TempError);
+            return Err(Error::UnknownColor);
         }
         self.clear();
         Ok(color)
@@ -75,7 +75,6 @@ impl AnsiGraphicsStack {
         let mut color_parse_mode: Option<AnsiColorMode> = None;
         let mut last_sequence: usize = 0;
         let mut color_layer: Option<AnsiColorLayer> = None;
-        // println!("{:?}", self);
         for sequence in self.iter().cloned() {
             if color_parse {
                 if sequence < 255 {
@@ -121,7 +120,6 @@ impl AnsiGraphicsStack {
                         color_parse = false;
                     }
                 } else {
-                    // println!("stop color index");
                     color_parse = false;
                 }
                 last_sequence = sequence;
@@ -142,12 +140,10 @@ impl AnsiGraphicsStack {
                 AnsiCode::DefaultForegroundColor => style = style.fg(Color::Reset),
                 AnsiCode::DefaultBackgroundColor => style = style.bg(Color::Reset),
                 AnsiCode::ForegroundColorIndex => {
-                    // println!("foreground color index");
                     color_parse = true;
                     color_layer = Some(AnsiColorLayer::Foreground)
                 }
                 AnsiCode::BackgroundColorIndex => {
-                    // println!("background color index");
                     color_parse = true;
                     color_layer = Some(AnsiColorLayer::Background)
                 }
@@ -158,8 +154,6 @@ impl AnsiGraphicsStack {
             last_sequence = sequence;
         }
         self.stack.clear();
-        // println!("style {:?}", style);
-        // println!("-----------------------------");
         style
     }
 }
@@ -207,18 +201,10 @@ pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
         }
         last_byte = byte;
     }
-    // println!("{:?}", buffer);
     if !spans_buffer.is_empty() {
         buffer.push(Spans::from(spans_buffer.clone()));
         spans_buffer.clear();
     }
 
-    // for span in buffer.iter() {
-    //     println!("HELLOA");
-    //     println!("{:?}", span);
-    // }
-
-    // println!("bufferlen {}", buffer.len());
-    // println!("{:?}", &buffer);
     Ok(buffer.into())
 }
