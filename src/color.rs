@@ -1,4 +1,11 @@
 use tui::style::Color;
+
+/// This enum contains AnsiColors  
+///
+/// Black, Red, .. LightCyan,White are 4 - bit colors.  
+/// Indexed(u8) is 8 - bit color.  
+/// RGB(u8,u8,u8) is true color.  
+
 #[derive(Debug, PartialEq)]
 pub enum AnsiColor {
     Black,

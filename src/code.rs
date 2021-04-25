@@ -1,4 +1,11 @@
 use crate::color::AnsiColor;
+
+/// This enum stores most types of ansi escape sequences  
+///
+/// You can turn an escape sequence to this enum variant using
+/// from(u8) trait.  
+/// This doesn't support all of them but does support most of them.  
+
 #[derive(Debug, PartialEq)]
 #[repr(u8)]
 #[allow(dead_code)]

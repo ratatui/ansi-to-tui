@@ -159,6 +159,15 @@ impl AnsiGraphicsStack {
     }
 }
 
+/// This functions converts the ascii byte sequence with ansi colors to tui::text::Text type  
+///
+/// Example
+/// ```rust
+/// use ansi_to_tui::ansi_to_text;
+/// let bytes : Vec<u8> = vec![b'\x1b', b'[', b'3', b'1', b'm', b'A', b'A', b'A', b'\x1b', b'[', b'0'];
+/// let text = ansi_to_text(&bytes);
+/// ```
+///
 pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
     let mut reader = bytes.as_ref().iter();
     let mut buffer: Vec<Spans> = Vec::new();
@@ -172,8 +181,8 @@ pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
     for byte in reader {
         match (last_byte, byte) {
             (&b'\x1b', &b'[') => {
-                if style.is_some() {
-                    spans_buffer.push(Span::styled(line_buffer.clone(), style.unwrap()));
+                if let Some(style) = style {
+                    spans_buffer.push(Span::styled(line_buffer.clone(), style));
                     line_buffer.clear();
                 }
                 graphics_start = true;
