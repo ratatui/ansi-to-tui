@@ -8,6 +8,7 @@ use tui::{
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
 };
+use unicode_width::UnicodeWidthChar;
 
 impl Stack<u8> {
     pub fn parse_usize(&mut self) -> usize {
@@ -167,7 +168,6 @@ pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
     let mut graphics_start: bool = false;
     let mut spans_buffer: Vec<Span> = Vec::new();
     let mut line_buffer = String::new();
-    // let mut last_byte: &u8 = reader.next().expect("Zero size bytes buffer");
     let mut last_byte: &u8 = &0_u8;
     for byte in reader {
         match (last_byte, byte) {
@@ -194,7 +194,7 @@ pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
                     } else {
                         num_stack.push(*code);
                     }
-                } else if code != &b'\x1b' {
+                } else if UnicodeWidthChar::width(*code as char).is_some() {
                     line_buffer.push(*code as char)
                 }
             }

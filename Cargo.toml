@@ -5,3 +5,4 @@ edition = "2018"
 
 [dependencies]
 tui = { version = "0.14.0", default-features = false }
+unicode-width = "0.1.8"
