@@ -184,6 +184,11 @@ pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
                 }
                 graphics_start = true;
             }
+
+            (_, &b'\n') => {
+                buffer.push(Spans::from(spans_buffer.clone()));
+                spans_buffer.clear();
+            }
             (_, code) => {
                 if graphics_start {
                     if code == &b'm' {
@@ -197,17 +202,23 @@ pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
                     }
                 } else if code != &b'\x1b' {
                     line_buffer.push(*code as char)
-                } else if code == &b'\n' {
-                    buffer.push(Spans::from(spans_buffer.clone()));
-                    spans_buffer.clear();
                 }
-                last_byte = code;
             }
         }
+        last_byte = byte;
     }
     // println!("{:?}", buffer);
-    buffer.push(Spans::from(spans_buffer.clone()));
-    spans_buffer.clear();
+    if !spans_buffer.is_empty() {
+        buffer.push(Spans::from(spans_buffer.clone()));
+        spans_buffer.clear();
+    }
 
+    // for span in buffer.iter() {
+    //     println!("HELLOA");
+    //     println!("{:?}", span);
+    // }
+
+    println!("bufferlen {}", buffer.len());
+    println!("{:?}", &buffer);
     Ok(buffer.into())
 }

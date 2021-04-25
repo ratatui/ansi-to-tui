@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 mod ansi;
 mod code;
 mod color;
@@ -26,7 +27,7 @@ pub fn main() {
 
     file.read_to_end(&mut buffer).unwrap();
     let _text = ansi_to_text(buffer).unwrap();
-    println!("{:?}", _text);
+    // println!("{:?}", _text);
 
     Paragraph::new(_text).render(Rect::new(1, 1, 10, 10), &mut tmp_buffer);
     write_buffer_to_console(&mut backend, &mut tmp_buffer).unwrap();
