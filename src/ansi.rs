@@ -158,7 +158,7 @@ impl AnsiGraphicsStack {
             last_sequence = sequence;
         }
         self.stack.clear();
-        println!("style {:?}", style);
+        // println!("style {:?}", style);
         // println!("-----------------------------");
         style
     }
@@ -171,6 +171,7 @@ pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
     let mut ansi_stack: AnsiGraphicsStack = AnsiGraphicsStack::new();
     let mut num_stack: Stack<u8> = Stack::new();
     let mut graphics_start: bool = false;
+    let mut spans_buffer: Vec<Span> = Vec::new();
     let mut line_buffer = String::new();
     // let mut last_byte: &u8 = reader.next().expect("Zero size bytes buffer");
     let mut last_byte: &u8 = &0_u8;
@@ -178,10 +179,8 @@ pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
         match (last_byte, byte) {
             (&b'\x1b', &b'[') => {
                 if style.is_some() {
-                    buffer.push(Spans::from(Span::styled(
-                        line_buffer.clone(),
-                        style.unwrap(),
-                    )));
+                    spans_buffer.push(Span::styled(line_buffer.clone(), style.unwrap()));
+                    line_buffer.clear();
                 }
                 graphics_start = true;
             }
@@ -198,12 +197,17 @@ pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
                     }
                 } else if code != &b'\x1b' {
                     line_buffer.push(*code as char)
+                } else if code == &b'\n' {
+                    buffer.push(Spans::from(spans_buffer.clone()));
+                    spans_buffer.clear();
                 }
                 last_byte = code;
             }
         }
     }
-    println!("{:?}", buffer);
+    // println!("{:?}", buffer);
+    buffer.push(Spans::from(spans_buffer.clone()));
+    spans_buffer.clear();
 
     Ok(buffer.into())
 }
