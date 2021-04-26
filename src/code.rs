@@ -8,7 +8,7 @@ use crate::color::AnsiColor;
 
 #[derive(Debug, PartialEq)]
 #[repr(u8)]
-#[allow(dead_code)]
+// #[allow(dead_code)]
 pub enum AnsiCode {
     Reset,
     Bold,
@@ -35,10 +35,10 @@ pub enum AnsiCode {
     CrossedOutOff,
 
     ForegroundColor(AnsiColor), //, 31..37//Issue 60553 https://github.com/rust-lang/rust/issues/60553
-    ForegroundColorIndex,
+    SetForegroundColor,
     DefaultForegroundColor,
     BackgroundColor(AnsiColor), // 41..47
-    BackgroundColorIndex,
+    SetBackgroundColor,
     DefaultBackgroundColor, // 49
 }
 
@@ -76,7 +76,7 @@ impl From<u8> for AnsiCode {
             35 => AnsiCode::ForegroundColor(AnsiColor::Magenta),
             36 => AnsiCode::ForegroundColor(AnsiColor::Cyan),
             37 => AnsiCode::ForegroundColor(AnsiColor::Gray),
-            38 => AnsiCode::ForegroundColorIndex,
+            38 => AnsiCode::SetForegroundColor,
             39 => AnsiCode::DefaultForegroundColor,
             40 => AnsiCode::BackgroundColor(AnsiColor::Black),
             41 => AnsiCode::BackgroundColor(AnsiColor::Red),
@@ -86,7 +86,7 @@ impl From<u8> for AnsiCode {
             45 => AnsiCode::BackgroundColor(AnsiColor::Magenta),
             46 => AnsiCode::BackgroundColor(AnsiColor::Cyan),
             47 => AnsiCode::BackgroundColor(AnsiColor::Gray),
-            48 => AnsiCode::BackgroundColorIndex,
+            48 => AnsiCode::SetBackgroundColor,
             49 => AnsiCode::DefaultBackgroundColor,
             _ => AnsiCode::Reset,
         }

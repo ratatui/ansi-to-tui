@@ -1,18 +1,7 @@
-#[cfg(test)]
-#[test]
-fn test_color() {
-    use crate::stack::Stack;
-    use tui::style::Color;
-    let mut stack: Stack<u8> = Stack::new();
-    stack.push(30);
-    assert_eq!(stack.parse_color().unwrap(), Color::Indexed(30));
-    stack.push(30);
-    stack.push(3);
-    stack.push(55);
-    assert_eq!(stack.parse_color().unwrap(), Color::Rgb(30, 3, 55));
-}
+use ansi_to_tui::ansi_to_text;
 
 #[test]
+#[ignore]
 fn test_bytes() {
     use crate::ansi_to_text;
     let bytes = vec![27_u8, 91, 51, 49, 109, 65, 65, 65];
@@ -20,6 +9,14 @@ fn test_bytes() {
 }
 
 #[test]
+fn ascii_rgb() {
+    use crate::ansi_to_text;
+    let bytes = b"\x1b[38;2;100;100;100mAAABBB";
+    println!("{:#?}", ansi_to_text(&bytes));
+}
+
+#[test]
+#[ignore = "Give a lot of output"]
 fn archlinux_ascii() {
     use crate::ansi_to_text;
     use std::{fs::File, io::Read};
@@ -31,7 +28,9 @@ fn archlinux_ascii() {
         println!("{:?}", line.width());
     }
 }
+
 #[test]
+#[ignore]
 fn ascii_test() {
     use crate::ansi_to_text;
     use std::{fs::File, io::Read};
@@ -39,5 +38,5 @@ fn ascii_test() {
     let mut buffer: Vec<u8> = Vec::new();
     ascii.read_to_end(&mut buffer).unwrap();
     let text = ansi_to_text(&buffer).unwrap();
-    println!("lines {:#?}", text);
+    println!("{:#?}", text);
 }
