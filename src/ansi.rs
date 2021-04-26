@@ -12,7 +12,7 @@ use unicode_width::UnicodeWidthChar;
 
 impl Stack<u8> {
     pub fn parse_usize(&mut self) -> usize {
-        let mut num: usize = 0 as usize;
+        let mut num: usize = 0;
         for n in self.iter() {
             // num = num * 10 + (n.saturating_sub(48_u8)) as usize
             num = num * 10 + (n - 48_u8) as usize
@@ -54,13 +54,15 @@ pub enum AnsiColorLayer {
 
 #[derive(Debug)]
 pub struct AnsiGraphicsStack {
-    stack: Stack<usize>,
+    stack: Vec<usize>,
+    lock: bool,
 }
 
 impl AnsiGraphicsStack {
     pub fn new() -> Self {
         Self {
-            stack: Stack::new(),
+            stack: Vec::new(),
+            lock: true,
         }
     }
     pub fn push(&mut self, sequence: usize) {
@@ -69,6 +71,25 @@ impl AnsiGraphicsStack {
     pub fn iter(&mut self) -> Iter<usize> {
         self.stack.iter()
     }
+    pub fn lock(&mut self) {
+        self.stack.clear();
+        self.lock = true;
+    }
+    pub fn unlock(&mut self) {
+        self.stack.clear();
+        self.lock = false;
+    }
+    pub fn is_locked(&self) -> bool {
+        self.lock
+    }
+    pub fn is_unlocked(&self) -> bool {
+        !self.lock
+    }
+
+    pub fn len(&self) -> usize {
+        self.stack.len()
+    }
+
     pub fn parse_ansi(&mut self) -> Style {
         let mut style = Style::default();
         let mut color_stack: Stack<u8> = Stack::new();
@@ -169,51 +190,120 @@ impl AnsiGraphicsStack {
 /// ```
 ///
 pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
-    let mut reader = bytes.as_ref().iter();
-    let mut buffer: Vec<Spans> = Vec::new();
-    let mut style: Option<Style> = None;
-    let mut ansi_stack: AnsiGraphicsStack = AnsiGraphicsStack::new();
-    let mut num_stack: Stack<u8> = Stack::new();
-    let mut graphics_start: bool = false;
-    let mut spans_buffer: Vec<Span> = Vec::new();
-    let mut line_buffer = String::new();
-    let mut last_byte: &u8 = &0_u8;
-    for byte in reader {
-        match (last_byte, byte) {
-            (&b'\x1b', &b'[') => {
-                if let Some(style) = style {
-                    spans_buffer.push(Span::styled(line_buffer.clone(), style));
-                    line_buffer.clear();
-                }
-                graphics_start = true;
-            }
+    let mut reader = bytes.as_ref().iter().copied();
 
-            (_, &b'\n') => {
-                buffer.push(Spans::from(spans_buffer.clone()));
-                spans_buffer.clear();
-            }
-            (_, code) => {
-                if graphics_start {
-                    if code == &b'm' {
-                        ansi_stack.push(num_stack.parse_usize());
-                        style = Some(ansi_stack.parse_ansi());
-                        graphics_start = false;
-                    } else if code == &b';' {
-                        ansi_stack.push(num_stack.parse_usize());
-                    } else {
-                        num_stack.push(*code);
+    let mut buffer: Vec<Spans> = Vec::new();
+    let mut span_buffer: Vec<Span> = Vec::new();
+    let mut style: Style = Style::default();
+
+    let mut ansi_stack: AnsiGraphicsStack = AnsiGraphicsStack::new();
+    let mut stack: Stack<u8> = Stack::new();
+
+    let mut line_buffer: String = String::new();
+
+    let mut last_byte = 0_u8;
+
+    for byte in reader {
+        let byte_char = char::from(byte);
+
+        if ansi_stack.is_unlocked() && last_byte == b'\x1b' && byte != b'[' {
+            // if byte after \x1b was not [ lock the stack
+            ansi_stack.lock();
+        }
+        if ansi_stack.is_locked() && UnicodeWidthChar::width(byte_char).is_some() {
+            line_buffer.push(byte_char)
+        } else {
+            match byte {
+                b'\x1b' => {
+                    if !line_buffer.is_empty() {
+                        span_buffer.push(Span::styled(line_buffer.clone(), style));
+                        line_buffer.clear();
                     }
-                } else if UnicodeWidthChar::width(*code as char).is_some() {
-                    line_buffer.push(*code as char)
+
+                    ansi_stack.unlock();
+                    // ansi_stack.push(byte as usize);
+                } // this clears the stack
+
+                b'\n' => {
+                    if !span_buffer.is_empty() {
+                        buffer.push(Spans::from(span_buffer.clone()));
+                        span_buffer.clear();
+                    }
+                }
+
+                b';' => ansi_stack.push(stack.parse_usize()),
+
+                48..=57 => {
+                    stack.push(byte);
+                } // 48 to 57 are the ascii values for 0..9
+
+                b'm' => {
+                    ansi_stack.push(stack.parse_usize());
+                    style = ansi_stack.parse_ansi();
+
+                    // lock after parse since lock will clear
+                    ansi_stack.lock();
+                }
+                b'[' => (),
+                _ => {
+                    // anything other than numbers or ; or newline or 'm' will lock the stack
+                    ansi_stack.lock();
                 }
             }
         }
         last_byte = byte;
     }
-    if !spans_buffer.is_empty() {
-        buffer.push(Spans::from(spans_buffer.clone()));
-        spans_buffer.clear();
+
+    if !line_buffer.is_empty() {
+        span_buffer.push(Span::styled(line_buffer.clone(), style));
+        line_buffer.clear();
     }
+    if !span_buffer.is_empty() {
+        buffer.push(Spans::from(span_buffer.clone()));
+        span_buffer.clear();
+    }
+
+    // let mut num_stack: Stack<u8> = Stack::new();
+    // let mut graphics_start: bool = false;
+    // let mut spans_buffer: Vec<Span> = Vec::new();
+    // let mut line_buffer = String::new();
+    // let mut last_byte: &u8 = &0_u8;
+    // for byte in reader {
+    //     match (last_byte, byte) {
+    //         (&b'\x1b', &b'[') => {
+    //             if let Some(style) = style {
+    //                 spans_buffer.push(Span::styled(line_buffer.clone(), style));
+    //                 line_buffer.clear();
+    //             }
+    //             graphics_start = true;
+    //         }
+
+    //         (_, &b'\n') => {
+    //             buffer.push(Spans::from(spans_buffer.clone()));
+    //             spans_buffer.clear();
+    //         }
+    //         (_, code) => {
+    //             if graphics_start {
+    //                 if code == &b'm' {
+    //                     ansi_stack.push(num_stack.parse_usize());
+    //                     style = Some(ansi_stack.parse_ansi());
+    //                     graphics_start = false;
+    //                 } else if code == &b';' {
+    //                     ansi_stack.push(num_stack.parse_usize());
+    //                 } else {
+    //                     num_stack.push(*code);
+    //                 }
+    //             } else if UnicodeWidthChar::width(*code as char).is_some() {
+    //                 line_buffer.push(*code as char)
+    //             }
+    //         }
+    //     }
+    //     last_byte = byte;
+    // }
+    // if !spans_buffer.is_empty() {
+    // buffer.push(Spans::from(spans_buffer.clone()));
+    // spans_buffer.clear();
+    // }
 
     Ok(buffer.into())
 }
