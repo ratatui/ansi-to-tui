@@ -11,11 +11,14 @@
 //! - Supports 8-bit color.
 //! - Supports True color ( RGB / 24-bit color ).
 //!
+//!
 //! ## Example
+//! The argument to the function `ansi_to_text` implements `IntoIterator` so it will be consumed on
+//! use.
 //! ```rust
 //! use ansi_to_tui::ansi_to_text;
-//! let bytes = b"\x1b[38;2;225;192;203mAAAAA\x1b[0m";
-//! let text = ansi_to_text(&bytes).unwrap();
+//! let bytes = b"\x1b[38;2;225;192;203mAAAAA\x1b[0m".to_owned().to_vec();
+//! let text = ansi_to_text(bytes).unwrap();
 //! ```
 //! You can use this text in a [tui](https://docs.rs/tui/) application.
 //!

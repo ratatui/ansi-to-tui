@@ -8,16 +8,19 @@ use tui::{
 };
 
 /// This functions converts the ascii byte sequence with ansi colors to tui::text::Text type  
+/// This functions's argument implements into_iter so the buffer will be consumed on use.
 ///
 /// Example
 /// ```rust
 /// use ansi_to_tui::ansi_to_text;
 /// let bytes : Vec<u8> = vec![b'\x1b', b'[', b'3', b'1', b'm', b'A', b'A', b'A', b'\x1b', b'[', b'0'];
-/// let text = ansi_to_text(&bytes);
+/// let text = ansi_to_text(bytes);
 /// ```
 ///
-pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
-    let reader = bytes.as_ref().iter().copied(); // copies the whole buffer to memory
+pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>, Error> {
+    // let reader = bytes.as_ref().iter().copied(); // copies the whole buffer to memory
+    let reader = bytes.into_iter();
+    // let _read = bytes.as_ref().into_iter();
 
     let mut buffer: Vec<Spans> = Vec::new();
     let mut span_buffer: Vec<Span> = Vec::new();
