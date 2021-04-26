@@ -30,7 +30,7 @@ fn archlinux_ascii() {
     ascii.read_to_end(&mut buffer).unwrap();
     let text = ansi_to_text(buffer).unwrap();
     for line in text.lines {
-        println!("{:?}", line.width());
+        print!("{:?} ", line.width());
     }
 }
 
@@ -44,4 +44,17 @@ fn ascii_test() {
     ascii.read_to_end(&mut buffer).unwrap();
     let text = ansi_to_text(buffer).unwrap();
     println!("{:#?}", text);
+}
+
+#[test]
+#[ignore]
+fn command_test() {
+use std::process::Command;
+
+let c = Command::new("ls")
+    .args(&["--color=always", "/"])
+    .output()
+    .unwrap();
+    let text = ansi_to_text(c.stdout);
+    println!("{:?}",text);
 }
