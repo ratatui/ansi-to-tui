@@ -8,7 +8,6 @@ use crate::color::AnsiColor;
 
 #[derive(Debug, PartialEq)]
 #[repr(u8)]
-// #[allow(dead_code)]
 pub enum AnsiCode {
     Reset,
     Bold,

@@ -57,27 +57,32 @@ impl<T> Stack<T> {
 }
 
 impl Stack<u8> {
-    pub fn parse_usize(&mut self) -> usize {
+    pub fn parse_usize(&mut self) -> Result<usize, Error> {
+        if self.is_empty() {
+            return Err(Error::UsizeParsingError);
+        }
         let mut num: usize = 0;
         for n in self.iter() {
             // num = num * 10 + (n.saturating_sub(48_u8)) as usize
             num = num * 10 + (n - 48_u8) as usize
         }
         self.clear();
-        num
+        Ok(num)
     }
     pub fn parse_color(&mut self) -> Result<Color, Error> {
         let color: Color;
         let length = self.len();
-        if length == 2 {
-            color = Color::Indexed(self.pop().expect("Shouldn't happen len check in place"))
-        } else if length == 4 {
-            let b = self.pop().unwrap();
-            let g = self.pop().unwrap();
-            let r = self.pop().unwrap();
-            color = Color::Rgb(r, g, b);
-        } else {
-            return Err(Error::UnknownColor);
+        match length {
+            2 => color = Color::Indexed(self.pop().expect("Shouldn't happen len check in place")),
+            4 => {
+                let b = self.pop().expect("Shouldn't happen len check in place");
+                let g = self.pop().expect("Shouldn't happen len check in place");
+                let r = self.pop().expect("Shouldn't happen len check in place");
+                color = Color::Rgb(r, g, b);
+            }
+            _ => {
+                return Err(Error::ColorParsingError);
+            }
         }
         self.clear();
         Ok(color)
@@ -129,7 +134,7 @@ impl AnsiGraphicsStack {
     //     self.stack.len()
     // }
 
-    pub fn parse_ansi(&mut self) -> Style {
+    pub fn parse_ansi(&mut self) -> Result<Style, Error> {
         let mut style = Style::default();
 
         // let mut stack: Stack<u8> = Stack::new();
@@ -163,19 +168,19 @@ impl AnsiGraphicsStack {
                     color_stack.push(sequence);
                     continue;
                 }
-                match color_stack.first().unwrap() {
+                match color_stack.first().ok_or(Error::StackEmpty)? {
                     2 => {
                         // first number is 2 ,second, third and fourth are r, g, b
                         if color_stack.len() <= 4 {
                             color_stack.push(sequence);
                         }
                         if color_stack.len() == 4 {
-                            match layer.unwrap() {
+                            match layer.ok_or(Error::UnknownLayer)? {
                                 AnsiColorLayer::Foreground => {
-                                    style = style.fg(color_stack.parse_color().unwrap());
+                                    style = style.fg(color_stack.parse_color()?);
                                 }
                                 AnsiColorLayer::Background => {
-                                    style = style.bg(color_stack.parse_color().unwrap());
+                                    style = style.bg(color_stack.parse_color()?);
                                 }
                             }
                         }
@@ -186,12 +191,12 @@ impl AnsiGraphicsStack {
                             color_stack.push(sequence);
                         }
                         if color_stack.len() == 2 {
-                            match layer.unwrap() {
+                            match layer.ok_or(Error::UnknownLayer)? {
                                 AnsiColorLayer::Foreground => {
-                                    style = style.fg(color_stack.parse_color().unwrap());
+                                    style = style.fg(color_stack.parse_color()?);
                                 }
                                 AnsiColorLayer::Background => {
-                                    style = style.bg(color_stack.parse_color().unwrap());
+                                    style = style.bg(color_stack.parse_color()?);
                                 }
                             }
                         }
@@ -236,6 +241,6 @@ impl AnsiGraphicsStack {
             }
         }
 
-        style
+        Ok(style)
     }
 }

@@ -1,10 +1,11 @@
 use crate::error::Error;
 use crate::stack::{AnsiGraphicsStack, Stack};
+#[cfg(feature = "simd")]
+use simdutf8::basic::from_utf8;
 use tui::{
     style::Style,
     text::{Span, Spans, Text},
 };
-use unicode_width::UnicodeWidthChar;
 
 /// This functions converts the ascii byte sequence with ansi colors to tui::text::Text type  
 ///
@@ -25,24 +26,31 @@ pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
     let mut ansi_stack: AnsiGraphicsStack = AnsiGraphicsStack::new();
     let mut stack: Stack<u8> = Stack::new();
 
-    let mut line_buffer: String = String::new();
+    let mut line_buffer: Vec<u8> = Vec::new();
 
     let mut last_byte = 0_u8;
 
     for byte in reader {
-        let byte_char = char::from(byte);
+        // let byte_char = char::from(byte);
 
         if ansi_stack.is_unlocked() && last_byte == b'\x1b' && byte != b'[' {
             // if byte after \x1b was not [ lock the stack
             ansi_stack.lock();
         }
-        if ansi_stack.is_locked() && UnicodeWidthChar::width(byte_char).is_some() {
-            line_buffer.push(byte_char)
+        // if ansi_stack.is_locked() && UnicodeWidthChar::width(byte_char).is_some() {
+        if ansi_stack.is_locked() && byte != b'\n' && byte != b'\x1b' {
+            line_buffer.push(byte)
         } else {
             match byte {
                 b'\x1b' => {
                     if !line_buffer.is_empty() {
-                        span_buffer.push(Span::styled(line_buffer.clone(), style));
+                        span_buffer.push(Span::styled(
+                            #[cfg(feature = "simd")]
+                            from_utf8(&line_buffer.clone())?.to_owned(),
+                            #[cfg(not(feature = "simd"))]
+                            String::from_utf8(line_buffer.clone())?,
+                            style,
+                        ));
                         line_buffer.clear();
                     }
 
@@ -57,13 +65,13 @@ pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
                     }
                 }
 
-                b';' => ansi_stack.push(stack.parse_usize()),
+                b';' => ansi_stack.push(stack.parse_usize()?),
 
                 b'0'..=b'9' => stack.push(byte),
 
                 b'm' => {
-                    ansi_stack.push(stack.parse_usize());
-                    style = ansi_stack.parse_ansi();
+                    ansi_stack.push(stack.parse_usize()?);
+                    style = ansi_stack.parse_ansi()?;
 
                     // lock after parse since lock will clear
                     ansi_stack.lock();
@@ -79,7 +87,13 @@ pub fn ansi_to_text<'t, B: AsRef<[u8]>>(bytes: B) -> Result<Text<'t>, Error> {
     }
 
     if !line_buffer.is_empty() {
-        span_buffer.push(Span::styled(line_buffer.clone(), style));
+        span_buffer.push(Span::styled(
+            #[cfg(feature = "simd")]
+            from_utf8(&line_buffer.clone())?.to_owned(),
+            #[cfg(not(feature = "simd"))]
+            String::from_utf8(line_buffer.clone())?,
+            style,
+        ));
         line_buffer.clear();
     }
     if !span_buffer.is_empty() {

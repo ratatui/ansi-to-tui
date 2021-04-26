@@ -3,9 +3,14 @@ use ansi_to_tui::ansi_to_text;
 #[test]
 #[ignore]
 fn test_bytes() {
-    use crate::ansi_to_text;
     let bytes = vec![27_u8, 91, 51, 49, 109, 65, 65, 65];
     println!("{:#?}", ansi_to_text(&bytes))
+}
+
+#[test]
+fn text_unicode() {
+    let bytes = "AAA🅱️🅱️🅱️".as_bytes();
+    println!("{:?}", ansi_to_text(bytes));
 }
 
 #[test]
