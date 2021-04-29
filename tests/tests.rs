@@ -15,13 +15,29 @@ fn text_unicode() {
 
 #[test]
 fn ascii_rgb() {
-    use crate::ansi_to_text;
     let bytes: Vec<u8> = b"\x1b[38;2;100;100;100mAAABBB".to_vec();
     println!("{:#?}", ansi_to_text(bytes));
 }
+#[test]
+fn ascii_multi() {
+    let bytes = "\x1b[31m\x1b[4m\x1b[1mHELLO".as_bytes().to_vec();
+    println!("{:#?}",ansi_to_text(bytes));
+}
 
 #[test]
-#[ignore = "Give a lot of output"]
+#[ignore = "Gives a lot of output"]
+fn arch_ascii() {
+    use crate::ansi_to_text;
+    use std::{fs::File, io::Read};
+    let mut ascii = File::open("tests/arch.ascii").unwrap();
+    let mut buffer: Vec<u8> = Vec::new();
+    ascii.read_to_end(&mut buffer).unwrap();
+    let text = ansi_to_text(buffer).unwrap();
+    println!("{:#?}",text);
+}
+
+#[test]
+#[ignore = "Gives a lot of output"]
 fn archlinux_ascii() {
     use crate::ansi_to_text;
     use std::{fs::File, io::Read};
@@ -29,9 +45,7 @@ fn archlinux_ascii() {
     let mut buffer: Vec<u8> = Vec::new();
     ascii.read_to_end(&mut buffer).unwrap();
     let text = ansi_to_text(buffer).unwrap();
-    for line in text.lines {
-        print!("{:?} ", line.width());
-    }
+    println!("{:#?}",text);
 }
 
 #[test]

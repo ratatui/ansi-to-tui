@@ -65,6 +65,8 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
                     if !span_buffer.is_empty() {
                         buffer.push(Spans::from(span_buffer.clone()));
                         span_buffer.clear();
+                    } else {
+                        buffer.push(Spans::default())
                     }
                 }
 
@@ -74,7 +76,8 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
 
                 b'm' => {
                     ansi_stack.push(stack.parse_usize()?);
-                    style = ansi_stack.parse_ansi()?;
+
+                    style = style.patch(ansi_stack.parse_ansi()?);
 
                     // lock after parse since lock will clear
                     ansi_stack.lock();
