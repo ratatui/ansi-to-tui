@@ -1,7 +1,18 @@
 [package]
 name = "ansi-to-tui"
 version = "0.1.6"
+authors = ["Uttarayan Mondal <uttarayan21@gmail.com>"]
 edition = "2018"
+description = "A library to convert ansi color coded text into tui::text::Text type from tui-rs library"
+keywords = ["ansi", "ascii", "tui", "parser"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/uttarayan21/ansi-to-tui"
+exclude = [
+    ".github/*",
+    "ascii",
+    "tests",
+]
 
 [dependencies]
 simdutf8 = { version = "0.1.1", optional = true }
@@ -9,3 +20,4 @@ tui = { version = "0.14.0", default-features = false }
 
 [features]
 simd = ["simdutf8"]
+

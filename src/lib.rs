@@ -20,14 +20,16 @@
 //! let bytes = b"\x1b[38;2;225;192;203mAAAAA\x1b[0m".to_owned().to_vec();
 //! let text = ansi_to_text(bytes).unwrap();
 //! ```
-//! You can use this text in a [tui](https://docs.rs/tui/) application.
+//! Example parsing from a file.
+//! ```rust
+//! use ansi_to_tui::ansi_to_text;
+//! use std::io::Read;
 //!
-//! ## Cargo.toml
-//!
-//! ```toml
-//! [dependencies]
-//! ansi_to_tui = { git = "https://github.com/uttarayan21/ansi-to-tui" }
+//! let file = std::fs::File::open("text.ascii");
+//! let mut buffer: Vec<u8> = Vec::new();
+//! let text = ansi_to_text(buffer);
 //! ```
+//!
 //! If you want to use [`simdutf8`](https://github.com/rusticstuff/simdutf8) instead of `String::from_utf8()`  
 //! for parsing UTF-8 then enable optional feature `simd`  
 

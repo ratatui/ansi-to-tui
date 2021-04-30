@@ -16,6 +16,15 @@ use tui::{
 /// let bytes : Vec<u8> = vec![b'\x1b', b'[', b'3', b'1', b'm', b'A', b'A', b'A', b'\x1b', b'[', b'0'];
 /// let text = ansi_to_text(bytes);
 /// ```
+/// Example parsing from a file.
+/// ```rust
+/// use ansi_to_tui::ansi_to_text;
+/// use std::io::Read;
+///
+/// let file = std::fs::File::open("text.ascii");
+/// let mut buffer: Vec<u8> = Vec::new();
+/// let text = ansi_to_text(buffer);
+/// ```
 ///
 pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>, Error> {
     // let reader = bytes.as_ref().iter().copied(); // copies the whole buffer to memory
@@ -54,21 +63,19 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
             // \e[31mHELLO\e[0m\e[31mTEST -> \e[31mHELLOTEST
 
             // if we find a byte after the new stack has been parsed we do
-            // if style_stack.last().unwrap() == &style {}
-            if line_styled_buffer.is_empty() {
-                // if !line_buffer.is_empty() {
-                if style_stack.last().unwrap() != &style && !line_buffer.is_empty() {
-                    // } else {
-                    span_buffer.push(Span::styled(
-                        #[cfg(feature = "simd")]
-                        from_utf8(&line_buffer)?.to_owned(),
-                        #[cfg(not(feature = "simd"))]
-                        String::from_utf8(line_buffer.clone())?,
-                        style_stack.pop().unwrap(),
-                    ));
-                    line_buffer.clear();
-                    style_stack.push(style);
-                }
+            if line_styled_buffer.is_empty()
+                && style_stack.last().unwrap() != &style
+                && !line_buffer.is_empty()
+            {
+                span_buffer.push(Span::styled(
+                    #[cfg(feature = "simd")]
+                    from_utf8(&line_buffer)?.to_owned(),
+                    #[cfg(not(feature = "simd"))]
+                    String::from_utf8(line_buffer.clone())?,
+                    style_stack.pop().unwrap(),
+                ));
+                line_buffer.clear();
+                style_stack.push(style);
             }
             line_styled_buffer.push(byte);
         } else {
@@ -82,11 +89,8 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
                 } // this clears the stack
 
                 b'\n' => {
-                    // println!("span_buffer {:#?}", span_buffer);
-                    // println!("line_buffer {:#?}", line_buffer);
                     // If line buffer is not empty when a newline is detected push the line_buffer
                     // to the span_buffer since we need the spans.
-                    // if style_stack.last().unwrap() == &stack {}
                     if !line_styled_buffer.is_empty() {
                         line_buffer.append(&mut line_styled_buffer);
                         line_styled_buffer.clear();
