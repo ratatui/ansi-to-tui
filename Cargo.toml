@@ -4,7 +4,7 @@ version = "0.1.6"
 edition = "2018"
 
 [dependencies]
-simdutf8 = { version = "0.1.0", optional = true }
+simdutf8 = { version = "0.1.1", optional = true }
 tui = { version = "0.14.0", default-features = false }
 
 [features]
