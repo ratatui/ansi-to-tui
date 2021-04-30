@@ -36,7 +36,7 @@ fn ascii_newlines() {
 fn arch_ascii() {
     use crate::ansi_to_text;
     use std::{fs::File, io::Read};
-    let mut ascii = File::open("tests/arch.ascii").unwrap();
+    let mut ascii = File::open("ascii/arch.ascii").unwrap();
     let mut buffer: Vec<u8> = Vec::new();
     ascii.read_to_end(&mut buffer).unwrap();
     let text = ansi_to_text(buffer).unwrap();
@@ -48,7 +48,7 @@ fn arch_ascii() {
 fn archlinux_ascii() {
     use crate::ansi_to_text;
     use std::{fs::File, io::Read};
-    let mut ascii = File::open("tests/archlinux.ascii").unwrap();
+    let mut ascii = File::open("ascii/archlinux.ascii").unwrap();
     let mut buffer: Vec<u8> = Vec::new();
     ascii.read_to_end(&mut buffer).unwrap();
     let text = ansi_to_text(buffer).unwrap();
