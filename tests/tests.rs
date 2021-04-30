@@ -8,7 +8,9 @@ fn test_bytes() {
 }
 
 #[test]
-fn text_unicode() {
+fn test_unicode() {
+    // these are 8 byte unicode charachters
+    // first 4 bytes are for the unicode and the last 4 bytes are for the color / variant
     let bytes = "AAA🅱️🅱️🅱️".as_bytes().to_vec();
     println!("{:?}", ansi_to_text(bytes));
 }
@@ -21,6 +23,11 @@ fn ascii_rgb() {
 #[test]
 fn ascii_multi() {
     let bytes = "\x1b[31m\x1b[4m\x1b[1mHELLO".as_bytes().to_vec();
+    println!("{:#?}",ansi_to_text(bytes));
+}
+#[test]
+fn ascii_newlines() {
+    let bytes = "LINE_1\n\n\n\n\n\n\nLINE_8".as_bytes().to_vec();
     println!("{:#?}",ansi_to_text(bytes));
 }
 
@@ -50,18 +57,6 @@ fn archlinux_ascii() {
 
 #[test]
 #[ignore]
-fn ascii_test() {
-    use crate::ansi_to_text;
-    use std::{fs::File, io::Read};
-    let mut ascii = File::open("tests/ascii").unwrap();
-    let mut buffer: Vec<u8> = Vec::new();
-    ascii.read_to_end(&mut buffer).unwrap();
-    let text = ansi_to_text(buffer).unwrap();
-    println!("{:#?}", text);
-}
-
-#[test]
-#[ignore]
 fn command_test() {
 use std::process::Command;
 
@@ -71,4 +66,6 @@ let c = Command::new("ls")
     .unwrap();
     let text = ansi_to_text(c.stdout);
     println!("{:?}",text);
+
 }
+

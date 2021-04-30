@@ -25,6 +25,9 @@ impl<T> Stack<T> {
     pub fn first(&self) -> Option<&T> {
         self.st.first()
     }
+    pub fn last(&self) -> Option<&T> {
+        self.st.last()
+    }
     pub fn iter(&mut self) -> Iter<T> {
         self.st.iter()
     }
