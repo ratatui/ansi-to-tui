@@ -194,6 +194,8 @@ pub fn ansi_to_text_override_style<'t, B: IntoIterator<Item = u8>>(
                             style,
                         )));
                         line_buffer.clear();
+                    } else {
+                        buffer.push(Spans::default());
                     }
                 }
                 b'[' => (),
