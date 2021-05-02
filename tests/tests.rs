@@ -1,4 +1,5 @@
-use ansi_to_tui::ansi_to_text;
+use tui::style::{Style,Color};
+use ansi_to_tui::{ansi_to_text,ansi_to_text_override_style};
 
 #[test]
 #[ignore]
@@ -40,6 +41,16 @@ fn arch_ascii() {
     let mut buffer: Vec<u8> = Vec::new();
     ascii.read_to_end(&mut buffer).unwrap();
     let text = ansi_to_text(buffer).unwrap();
+    println!("{:#?}",text);
+}
+
+#[test]
+fn override_style() {
+    use std::{fs::File, io::Read};
+    let mut ascii = File::open("ascii/archlinux.ascii").unwrap();
+    let mut buffer: Vec<u8> = Vec::new();
+    ascii.read_to_end(&mut buffer).unwrap();
+    let text = ansi_to_text_override_style(buffer,Style::default().fg(Color::Red)).unwrap();
     println!("{:#?}",text);
 }
 

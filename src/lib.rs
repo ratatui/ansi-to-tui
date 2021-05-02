@@ -40,6 +40,7 @@ mod error;
 mod stack;
 
 pub use ansi::ansi_to_text;
+pub use ansi::ansi_to_text_override_style;
 pub use code::AnsiCode;
 pub use color::AnsiColor;
 pub use error::Error;

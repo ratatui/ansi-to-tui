@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 use crate::error::Error;
 use crate::stack::{AnsiGraphicsStack, Stack};
 #[cfg(feature = "simd")]
@@ -155,5 +156,63 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
         // span_buffer.clear();
     }
 
+    Ok(buffer.into())
+}
+
+// pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>, Error> {
+pub fn ansi_to_text_override_style<'t, B: IntoIterator<Item = u8>>(
+    bytes: B,
+    style: tui::style::Style,
+) -> Result<Text<'t>, Error> {
+    let reader = bytes.into_iter();
+
+    let mut buffer: Vec<Spans> = Vec::new();
+    let mut line_buffer: Vec<u8> = Vec::new();
+
+    let mut parsing_ansi_code: bool = false;
+    let mut last_byte: u8 = 0_u8;
+
+    for byte in reader {
+        if parsing_ansi_code && last_byte == b'\x1b' && byte != b'[' {
+            parsing_ansi_code = false;
+        }
+        if !parsing_ansi_code && byte != b'\n' && byte != b'\x1b' {
+            line_buffer.push(byte);
+        } else {
+            match byte {
+                b'\x1b' => {
+                    parsing_ansi_code = true;
+                }
+                b'0'..=b'9' | b';' => (),
+                b'\n' => {
+                    if !line_buffer.is_empty() {
+                        buffer.push(Spans::from(Span::styled(
+                            #[cfg(feature = "simd")]
+                            from_utf8(&line_buffer)?.to_owned(),
+                            #[cfg(not(feature = "simd"))]
+                            String::from_utf8(line_buffer.clone())?,
+                            style,
+                        )));
+                        line_buffer.clear();
+                    }
+                }
+                b'[' => (),
+                _ => {
+                    parsing_ansi_code = false;
+                }
+            }
+        }
+        last_byte = byte;
+    }
+    if !line_buffer.is_empty() {
+        buffer.push(Spans::from(Span::styled(
+            #[cfg(feature = "simd")]
+            from_utf8(&line_buffer)?.to_owned(),
+            #[cfg(not(feature = "simd"))]
+            String::from_utf8(line_buffer.clone())?,
+            style,
+        )));
+        line_buffer.clear();
+    }
     Ok(buffer.into())
 }
