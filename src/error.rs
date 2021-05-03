@@ -6,11 +6,16 @@ use std::string::FromUtf8Error;
 /// This enum stores the error types
 #[derive(Debug)]
 pub enum Error {
+    /// Stack is empty (should never happen)
     StackEmpty,
     // InvalidAnsi,
+    /// Error parsing the input as utf-8
     Utf8Error,
+    /// Cannot determine the foreground or background 
     UnknownLayer,
+    /// Error while parsing the color
     ColorParsingError,
+    /// Error while paring the ansi sequnce as a usize ( should really be u8 max )
     UsizeParsingError,
 }
 

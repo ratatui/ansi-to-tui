@@ -159,7 +159,7 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
     Ok(buffer.into())
 }
 
-// pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>, Error> {
+/// Same as ansi_to_text but with a custom override style for the whole text.
 pub fn ansi_to_text_override_style<'t, B: IntoIterator<Item = u8>>(
     bytes: B,
     style: tui::style::Style,

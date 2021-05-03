@@ -1,3 +1,4 @@
+#![warn(missing_docs)]
 //! Parses a `Vec<u8>` as an byte sequence with ansi colors to
 //! [`tui::text::Text`](https://docs.rs/tui/0.14.0/tui/text/struct.Text.html).  
 //!
@@ -35,12 +36,10 @@
 
 mod ansi;
 mod code;
-mod color;
 mod error;
 mod stack;
 
 pub use ansi::ansi_to_text;
 pub use ansi::ansi_to_text_override_style;
 pub use code::AnsiCode;
-pub use color::AnsiColor;
 pub use error::Error;

@@ -94,7 +94,7 @@ impl Stack<u8> {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(u8)]
-pub enum AnsiColorLayer {
+pub enum ColorLayer {
     Background,
     Foreground,
 }
@@ -143,7 +143,7 @@ impl AnsiGraphicsStack {
         // let mut stack: Stack<u8> = Stack::new();
         let mut color_stack: Stack<u8> = Stack::new();
 
-        let mut layer: Option<AnsiColorLayer> = None;
+        let mut layer: Option<ColorLayer> = None;
 
         for sequence in self.iter().copied() {
             // sequence should always be an u8
@@ -179,10 +179,10 @@ impl AnsiGraphicsStack {
                         }
                         if color_stack.len() == 4 {
                             match layer.ok_or(Error::UnknownLayer)? {
-                                AnsiColorLayer::Foreground => {
+                                ColorLayer::Foreground => {
                                     style = style.fg(color_stack.parse_color()?);
                                 }
-                                AnsiColorLayer::Background => {
+                                ColorLayer::Background => {
                                     style = style.bg(color_stack.parse_color()?);
                                 }
                             }
@@ -195,10 +195,10 @@ impl AnsiGraphicsStack {
                         }
                         if color_stack.len() == 2 {
                             match layer.ok_or(Error::UnknownLayer)? {
-                                AnsiColorLayer::Foreground => {
+                                ColorLayer::Foreground => {
                                     style = style.fg(color_stack.parse_color()?);
                                 }
-                                AnsiColorLayer::Background => {
+                                ColorLayer::Background => {
                                     style = style.bg(color_stack.parse_color()?);
                                 }
                             }
@@ -227,19 +227,19 @@ impl AnsiGraphicsStack {
                 AnsiCode::DefaultForegroundColor => style = style.fg(Color::Reset),
                 AnsiCode::DefaultBackgroundColor => style = style.bg(Color::Reset),
                 AnsiCode::SetForegroundColor => {
-                    // color_layer = Some(AnsiColorLayer::Foreground)
+                    // color_layer = Some(ColorLayer::Foreground)
                     // current byte is 38
-                    layer = Some(AnsiColorLayer::Foreground);
+                    layer = Some(ColorLayer::Foreground);
                     color_stack.unlock();
                 }
                 AnsiCode::SetBackgroundColor => {
-                    // color_layer = Some(AnsiColorLayer::Background)
+                    // color_layer = Some(ColorLayer::Background)
                     // current byte is 48
-                    layer = Some(AnsiColorLayer::Background);
+                    layer = Some(ColorLayer::Background);
                     color_stack.unlock();
                 }
-                AnsiCode::ForegroundColor(color) => style = style.fg(Color::from(color)),
-                AnsiCode::BackgroundColor(color) => style = style.bg(Color::from(color)),
+                AnsiCode::ForegroundColor(color) => style = style.fg(color),
+                AnsiCode::BackgroundColor(color) => style = style.bg(color),
                 _ => (),
             }
         }

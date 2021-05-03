@@ -1,4 +1,5 @@
-use crate::color::AnsiColor;
+// use crate::color::Color;
+use tui::style::Color;
 
 /// This enum stores most types of ansi escape sequences  
 ///
@@ -9,35 +10,62 @@ use crate::color::AnsiColor;
 #[derive(Debug, PartialEq)]
 #[repr(u8)]
 pub enum AnsiCode {
+    /// Reset the terminal
     Reset,
+    /// Set font to bold
     Bold,
+    /// Set font to faint
     Faint,
+    /// Set font to italic
     Italic,
+    /// Set font to underline
     Underline,
+    /// Set cursor to slowblink
     SlowBlink,
+    /// Set cursor to rapidblink
     RapidBlink,
+    /// Invert the colors
     Reverse,
+    /// Conceal text
     Conceal,
+    /// Display crossed out text
     CrossedOut,
+    /// Choose primary font
     PrimaryFont,
+    /// Choose alternate font
     AlternateFont,
+    /// Choose alternate fonts 1-9
     AlternateFonts(u8), // = 11..19, // from 11 to 19
+    /// Fraktur ? No clue
     Fraktur,
+    /// Turn off bold
     BoldOff,
+    /// Set text to normal
     Normal,
+    /// Turn off Italic
     NotItalic,
+    /// Turn off underline
     UnderlineOff,
+    /// Turn off blinking
     BlinkOff,
     // 26 ?
+    /// Don't invert colors
     InvertOff,
+    /// Reveal text
     Reveal,
+    /// Turn off Crossedout text
     CrossedOutOff,
-
-    ForegroundColor(AnsiColor), //, 31..37//Issue 60553 https://github.com/rust-lang/rust/issues/60553
+    /// Set foreground color (4-bit)
+    ForegroundColor(Color), //, 31..37//Issue 60553 https://github.com/rust-lang/rust/issues/60553
+    /// Set foreground color (8-bit and 24-bit)
     SetForegroundColor,
+    /// Default foreground color
     DefaultForegroundColor,
-    BackgroundColor(AnsiColor), // 41..47
+    /// Set background color (4-bit)
+    BackgroundColor(Color), // 41..47
+    /// Set background color (8-bit and 24-bit)
     SetBackgroundColor,
+    /// Default background color
     DefaultBackgroundColor, // 49
 }
 
@@ -67,24 +95,24 @@ impl From<u8> for AnsiCode {
             27 => AnsiCode::InvertOff,
             28 => AnsiCode::Reveal,
             29 => AnsiCode::CrossedOutOff,
-            30 => AnsiCode::ForegroundColor(AnsiColor::Black),
-            31 => AnsiCode::ForegroundColor(AnsiColor::Red),
-            32 => AnsiCode::ForegroundColor(AnsiColor::Green),
-            33 => AnsiCode::ForegroundColor(AnsiColor::Yellow),
-            34 => AnsiCode::ForegroundColor(AnsiColor::Blue),
-            35 => AnsiCode::ForegroundColor(AnsiColor::Magenta),
-            36 => AnsiCode::ForegroundColor(AnsiColor::Cyan),
-            37 => AnsiCode::ForegroundColor(AnsiColor::Gray),
+            30 => AnsiCode::ForegroundColor(Color::Black),
+            31 => AnsiCode::ForegroundColor(Color::Red),
+            32 => AnsiCode::ForegroundColor(Color::Green),
+            33 => AnsiCode::ForegroundColor(Color::Yellow),
+            34 => AnsiCode::ForegroundColor(Color::Blue),
+            35 => AnsiCode::ForegroundColor(Color::Magenta),
+            36 => AnsiCode::ForegroundColor(Color::Cyan),
+            37 => AnsiCode::ForegroundColor(Color::Gray),
             38 => AnsiCode::SetForegroundColor,
             39 => AnsiCode::DefaultForegroundColor,
-            40 => AnsiCode::BackgroundColor(AnsiColor::Black),
-            41 => AnsiCode::BackgroundColor(AnsiColor::Red),
-            42 => AnsiCode::BackgroundColor(AnsiColor::Green),
-            43 => AnsiCode::BackgroundColor(AnsiColor::Yellow),
-            44 => AnsiCode::BackgroundColor(AnsiColor::Blue),
-            45 => AnsiCode::BackgroundColor(AnsiColor::Magenta),
-            46 => AnsiCode::BackgroundColor(AnsiColor::Cyan),
-            47 => AnsiCode::BackgroundColor(AnsiColor::Gray),
+            40 => AnsiCode::BackgroundColor(Color::Black),
+            41 => AnsiCode::BackgroundColor(Color::Red),
+            42 => AnsiCode::BackgroundColor(Color::Green),
+            43 => AnsiCode::BackgroundColor(Color::Yellow),
+            44 => AnsiCode::BackgroundColor(Color::Blue),
+            45 => AnsiCode::BackgroundColor(Color::Magenta),
+            46 => AnsiCode::BackgroundColor(Color::Cyan),
+            47 => AnsiCode::BackgroundColor(Color::Gray),
             48 => AnsiCode::SetBackgroundColor,
             49 => AnsiCode::DefaultBackgroundColor,
             _ => AnsiCode::Reset,
