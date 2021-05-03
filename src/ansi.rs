@@ -7,7 +7,7 @@ use tui::{
     text::{Span, Spans, Text},
 };
 
-/// This functions converts the ascii byte sequence with ansi colors to tui::text::Text type  
+/// This functions converts the ascii byte sequence with ansi colors to [tui::text::Text][Text] type  
 /// This functions's argument implements into_iter so the buffer will be consumed on use.
 ///
 /// Example
@@ -21,10 +21,12 @@ use tui::{
 /// use ansi_to_tui::ansi_to_text;
 /// use std::io::Read;
 ///
-/// let file = std::fs::File::open("text.ascii");
+/// let mut file = std::fs::File::open("ascii/text.ascii").unwrap();
 /// let mut buffer: Vec<u8> = Vec::new();
+/// file.read_to_end(&mut buffer);
 /// let text = ansi_to_text(buffer);
 /// ```
+/// [Text]: https://docs.rs/tui/0.15.0/tui/text/struct.Text.html
 ///
 pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>, Error> {
     // let reader = bytes.as_ref().iter().copied(); // copies the whole buffer to memory
