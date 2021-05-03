@@ -39,7 +39,6 @@ mod code;
 mod error;
 mod stack;
 
-pub use ansi::ansi_to_text;
-pub use ansi::ansi_to_text_override_style;
+pub use ansi::{ansi_to_text, ansi_to_text_override_style};
 pub use code::AnsiCode;
 pub use error::Error;

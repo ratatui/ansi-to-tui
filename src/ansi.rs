@@ -1,4 +1,3 @@
-#![allow(unused_variables)]
 use crate::error::Error;
 use crate::stack::{AnsiGraphicsStack, Stack};
 #[cfg(feature = "simd")]

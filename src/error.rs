@@ -11,7 +11,7 @@ pub enum Error {
     // InvalidAnsi,
     /// Error parsing the input as utf-8
     Utf8Error,
-    /// Cannot determine the foreground or background 
+    /// Cannot determine the foreground or background
     UnknownLayer,
     /// Error while parsing the color
     ColorParsingError,

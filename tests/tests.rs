@@ -1,5 +1,5 @@
-use tui::style::{Style,Color};
-use ansi_to_tui::{ansi_to_text,ansi_to_text_override_style};
+use ansi_to_tui::{ansi_to_text, ansi_to_text_override_style};
+use tui::style::{Color, Style};
 
 #[test]
 #[ignore]
@@ -24,12 +24,12 @@ fn ascii_rgb() {
 #[test]
 fn ascii_multi() {
     let bytes = "\x1b[31m\x1b[4m\x1b[1mHELLO".as_bytes().to_vec();
-    println!("{:#?}",ansi_to_text(bytes));
+    println!("{:#?}", ansi_to_text(bytes));
 }
 #[test]
 fn ascii_newlines() {
     let bytes = "LINE_1\n\n\n\n\n\n\nLINE_8".as_bytes().to_vec();
-    println!("{:#?}",ansi_to_text(bytes));
+    println!("{:#?}", ansi_to_text(bytes));
 }
 
 #[test]
@@ -41,7 +41,7 @@ fn arch_ascii() {
     let mut buffer: Vec<u8> = Vec::new();
     ascii.read_to_end(&mut buffer).unwrap();
     let text = ansi_to_text(buffer).unwrap();
-    println!("{:#?}",text);
+    println!("{:#?}", text);
 }
 
 #[test]
@@ -50,8 +50,8 @@ fn override_style() {
     let mut ascii = File::open("ascii/archlinux.ascii").unwrap();
     let mut buffer: Vec<u8> = Vec::new();
     ascii.read_to_end(&mut buffer).unwrap();
-    let text = ansi_to_text_override_style(buffer,Style::default().fg(Color::Red)).unwrap();
-    println!("{:#?}",text);
+    let text = ansi_to_text_override_style(buffer, Style::default().fg(Color::Red)).unwrap();
+    println!("{:#?}", text);
 }
 
 #[test]
@@ -63,20 +63,18 @@ fn archlinux_ascii() {
     let mut buffer: Vec<u8> = Vec::new();
     ascii.read_to_end(&mut buffer).unwrap();
     let text = ansi_to_text(buffer).unwrap();
-    println!("{:#?}",text);
+    println!("{:#?}", text);
 }
 
 #[test]
 #[ignore]
 fn command_test() {
-use std::process::Command;
+    use std::process::Command;
 
-let c = Command::new("ls")
-    .args(&["--color=always", "/"])
-    .output()
-    .unwrap();
+    let c = Command::new("ls")
+        .args(&["--color=always", "/"])
+        .output()
+        .unwrap();
     let text = ansi_to_text(c.stdout);
-    println!("{:?}",text);
-
+    println!("{:?}", text);
 }
-
