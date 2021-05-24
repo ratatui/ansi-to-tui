@@ -18,6 +18,8 @@ exclude = [
 simdutf8 = { version = "0.1.1", optional = true }
 tui = { version = "0.14.0", default-features = false }
 
+[dev-dependencies]
+anyhow = "*"
+
 [features]
 simd = ["simdutf8"]
-

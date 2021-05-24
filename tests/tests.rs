@@ -2,6 +2,13 @@ use ansi_to_tui::{ansi_to_text, ansi_to_text_override_style};
 use tui::style::{Color, Style};
 
 #[test]
+fn test_anyhow() -> anyhow::Result<()> {
+    let text = ansi_to_text("foo".bytes())?;
+    println!("{:#?}", text);
+    Ok(())
+}
+
+#[test]
 #[ignore]
 fn test_bytes() {
     let bytes: Vec<u8> = vec![27_u8, 91, 51, 49, 109, 65, 65, 65];
