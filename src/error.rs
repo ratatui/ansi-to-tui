@@ -3,6 +3,8 @@ use simdutf8::basic::Utf8Error;
 #[cfg(not(feature = "simd"))]
 use std::string::FromUtf8Error;
 
+use std::error::Error as StdErr;
+
 /// This enum stores the error types
 #[derive(Debug)]
 pub enum Error {
@@ -31,3 +33,11 @@ impl From<Utf8Error> for Error {
         Error::Utf8Error
     }
 }
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl StdErr for Error {}
