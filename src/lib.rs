@@ -7,7 +7,7 @@
 //!
 //! Supported features
 //! - UTF-8 using `String::from_utf8` or [`simdutf8`][simdutf8].
-//! - Most stuff like **Bold** / *Italic* / <u>Underline</u> / ~~Striketrhough~~.
+//! - Most stuff like **Bold** / *Italic* / <u>Underline</u> / ~~Strikethrough~~.
 //! - Supports 4-bit color palletes.
 //! - Supports 8-bit color.
 //! - Supports True color ( RGB / 24-bit color ).
