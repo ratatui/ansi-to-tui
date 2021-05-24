@@ -9,6 +9,12 @@ fn test_bytes() {
 }
 
 #[test]
+fn test_string() {
+    let string = "FOO".to_string();
+    println!("{:?}", ansi_to_text(string.bytes()).unwrap());
+}
+
+#[test]
 fn test_unicode() {
     // these are 8 byte unicode charachters
     // first 4 bytes are for the unicode and the last 4 bytes are for the color / variant

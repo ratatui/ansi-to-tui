@@ -142,6 +142,11 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
         last_byte = byte;
     }
 
+    if !line_styled_buffer.is_empty() {
+        line_buffer.append(&mut line_styled_buffer);
+        line_styled_buffer.clear();
+    }
+
     if !line_buffer.is_empty() {
         span_buffer.push(Span::styled(
             #[cfg(feature = "simd")]
