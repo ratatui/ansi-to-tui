@@ -44,7 +44,7 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
     let mut ansi_stack: AnsiGraphicsStack = AnsiGraphicsStack::new();
     let mut style_stack: Stack<Style> = Stack::new();
 
-    style_stack.push(style);
+    // style_stack.push(style);
 
     let mut last_byte = 0_u8;
 
@@ -55,20 +55,12 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
             // if byte after \x1b was not [ lock the stack
             ansi_stack.lock();
         }
-        // don't use UnicodeWidthChar since we are also parsing utf8.
-        // But if there is some error in the byte sequence then
-        // if ansi_stack.is_locked() && UnicodeWidthChar::width(byte_char).is_some() {
         if ansi_stack.is_locked() && byte != b'\n' && byte != b'\x1b' {
-            // line_buffer.push(byte)
-
-            // Implemented
-            // \e[31mHELLO\e[0m\e[31mTEST -> \e[31mHELLOTEST
-
-            // if we find a byte after the new stack has been parsed we do
             if line_styled_buffer.is_empty()
-                && style_stack.last().unwrap() != &style
                 && !line_buffer.is_empty()
+                && style_stack.last() != Some(&style)
             {
+                println!("style {:?}", style);
                 span_buffer.push(Span::styled(
                     #[cfg(feature = "simd")]
                     from_utf8(&line_buffer)?.to_owned(),
@@ -107,6 +99,7 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
                             style,
                         ));
                         line_buffer.clear();
+                        // style_stack.push(style);
                     }
 
                     if !span_buffer.is_empty() {
@@ -127,6 +120,9 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
                     // patch since the last style is not overwritten, only modified with a new
                     // sequence.
                     style = style.patch(ansi_stack.parse_ansi()?);
+                    if style_stack.is_empty() {
+                        style_stack.push(style);
+                    }
                     // lock after parse since lock will clear
                     ansi_stack.lock();
                 }

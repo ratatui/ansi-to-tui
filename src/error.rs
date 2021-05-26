@@ -8,7 +8,6 @@ use std::string::FromUtf8Error;
 pub enum Error {
     /// Stack is empty (should never happen)
     StackEmpty,
-    // InvalidAnsi,
     /// Error parsing the input as utf-8
     Utf8Error,
     /// Cannot determine the foreground or background
