@@ -205,7 +205,6 @@ impl AnsiGraphicsStack {
                         }
                     }
                     _ => {
-                        println!("locked");
                         color_stack.lock();
                     } // first number is not 2 or 5 lock
                 }
