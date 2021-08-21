@@ -5,7 +5,7 @@
 Parse text with ANSI color codes and turn them into [`tui::text::Text`][Text].
 
 |  Color  | Supported |          Examples        |
-|   ---   |    ---    |            ---           |
+|   ---   |   :---:   |            ---           |
 | 24 bit  |     ✓     | `\x1b[38;2;<R>;<G>;<B>m` |
 | 8 bit   |     ✓     | `\x1b[38;5;<N>m`         |
 | 4 bit   |     ✓     | `\x1b[30..37;40..47m`    |
