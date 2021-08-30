@@ -22,7 +22,7 @@ file.read_to_end(&mut buffer);
 let output = ansi_to_text(buffer);
 ```
 
-A naive, yet relatively fast implementation with lots of room for improvement.
+<!-- A naive, yet relatively fast implementation with lots of room for improvement. -->
 
 [Text]: https://docs.rs/tui/0.16.0/tui/text/struct.Text.html
 [ansi-to-tui]: https://github.com/uttarayan21/ansi-to-tui
