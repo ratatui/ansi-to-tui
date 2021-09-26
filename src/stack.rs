@@ -150,7 +150,6 @@ impl AnsiGraphicsStack {
             // but since you can actually write more than u8 (incase of erroneous input)
             // i'm using usize
             // if input is greater than u8 simply skip the iteration and clear the color_stack.
-            println!("sequence {:?}", sequence);
 
             let code;
             let _seq: Result<u8, _> = sequence.try_into();

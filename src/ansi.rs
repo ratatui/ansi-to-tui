@@ -50,19 +50,12 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
 
     for byte in reader {
         // let byte_char = char::from(byte);
-        // println!("{:#?}", byte);
 
         if ansi_stack.is_unlocked() && last_byte == b'\x1b' && byte != b'[' {
             // if byte after \x1b was not [ lock the stack
             ansi_stack.lock();
         }
 
-        // if byte == 66 {
-        //     println!("{:?}", style_stack.last());
-        //     println!("{:?}", style);
-        // }
-
-        // println!("{:?}",style_stack.last());
         if ansi_stack.is_locked() && byte != b'\n' && byte != b'\x1b' {
             if line_styled_buffer.is_empty()
                 && !line_buffer.is_empty()
@@ -136,11 +129,9 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
                         style = style.patch(_style_new);
                     }
 
-                    // println!("_x {:#?}", _x);
                     if style_stack.is_empty() {
                         style_stack.push(style);
                     }
-                    // println!("After {:#?}", style_stack);
                     // lock after parse since lock will clear
                     ansi_stack.lock();
                 }
