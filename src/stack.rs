@@ -150,6 +150,7 @@ impl AnsiGraphicsStack {
             // but since you can actually write more than u8 (incase of erroneous input)
             // i'm using usize
             // if input is greater than u8 simply skip the iteration and clear the color_stack.
+            println!("sequence {:?}", sequence);
 
             let code;
             let _seq: Result<u8, _> = sequence.try_into();
@@ -163,6 +164,7 @@ impl AnsiGraphicsStack {
                 color_stack.lock();
                 continue;
             }
+
             if color_stack.is_unlocked() {
                 // don't match against other stuff
                 // on first run it will push 2/5 ie rgb or indexed color
@@ -211,7 +213,6 @@ impl AnsiGraphicsStack {
                 //
                 continue;
             }
-
             match code {
                 AnsiCode::Reset => style = Style::default(),
                 AnsiCode::Bold => style = style.add_modifier(Modifier::BOLD),

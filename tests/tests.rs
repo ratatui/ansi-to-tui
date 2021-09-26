@@ -100,3 +100,10 @@ fn test_command() {
     println!("{:?}", text);
 }
 
+#[test]
+#[ignore]
+fn test_reset() {
+    let string = "\x1b[33mA\x1b[0mB";
+    println!("{:?}\n\n", string);
+    println!("{:#?}",ansi_to_text(string.bytes()));
+}
