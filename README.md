@@ -1,6 +1,6 @@
 # ansi-to-tui
 
-[![Build & Tests](https://github.com/uttarayan21/ansi-to-tui/actions/workflows/build.yaml/badge.svg)][ansi-to-tui]
+[![build](https://github.com/uttarayan21/ansi-to-tui/actions/workflows/build.yaml/badge.svg)][ansi-to-tui] [![downloads](https://img.shields.io/crates/d/ansi-to-tui)](https://crates.io/crates/ansi-to-tui)
 
 Parse text with ANSI color codes and turn them into [`tui::text::Text`][Text].
 
