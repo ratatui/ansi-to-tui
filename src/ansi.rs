@@ -61,12 +61,16 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
                 && !line_buffer.is_empty()
                 && style_stack.last() != Some(&style)
             {
+                let style = match style_stack.pop() {
+                    Some(style) => style,
+                    None => return Err(Error::StackEmpty),
+                };
                 span_buffer.push(Span::styled(
                     #[cfg(feature = "simd")]
                     from_utf8(&line_buffer)?.to_owned(),
                     #[cfg(not(feature = "simd"))]
                     String::from_utf8(line_buffer.clone())?,
-                    style_stack.pop().unwrap(),
+                    style,
                 ));
                 line_buffer.clear();
                 style_stack.push(style);
