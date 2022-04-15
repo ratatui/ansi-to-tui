@@ -20,7 +20,7 @@ fn test_generic() {
     let string = "\x1b[33mYellow\x1b[31mRed\x1b[32mGreen\x1b[0m";
     println!("{:?}\n\n", string);
     // ansi_to_text(string.bytes()).unwrap();
-    println!("{:#?}",ansi_to_text(string.bytes()));
+    println!("{:#?}", ansi_to_text(string.bytes()));
 }
 
 #[test]
@@ -105,5 +105,5 @@ fn test_command() {
 fn test_reset() {
     let string = "\x1b[33mA\x1b[0mB";
     println!("{:?}\n\n", string);
-    println!("{:#?}",ansi_to_text(string.bytes()));
+    println!("{:#?}", ansi_to_text(string.bytes()));
 }
