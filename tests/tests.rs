@@ -1,5 +1,7 @@
 use ansi_to_tui::{ansi_to_text, ansi_to_text_override_style};
-use tui::style::{Color, Style};
+use pretty_assertions::assert_eq;
+use tui::style::{Color, Modifier, Style};
+use tui::text::{Span, Spans, Text};
 
 #[test]
 fn test_anyhow() -> anyhow::Result<()> {
@@ -19,14 +21,27 @@ fn test_bytes() {
 fn test_generic() {
     let string = "\x1b[33mYellow\x1b[31mRed\x1b[32mGreen\x1b[0m";
     println!("{:?}\n\n", string);
-    // ansi_to_text(string.bytes()).unwrap();
-    println!("{:#?}", ansi_to_text(string.bytes()));
+
+    let text = ansi_to_text(string.bytes()).unwrap();
+    println!("{:#?}", &text);
+
+    let expecting = Text::from(Spans::from(vec![
+        Span::styled("Yellow", Style::default().fg(Color::Yellow)),
+        Span::styled("Red", Style::default().fg(Color::Red)),
+        Span::styled("Green", Style::default().fg(Color::Green)),
+    ]));
+    assert_eq!(text, expecting);
 }
 
 #[test]
 fn test_string() {
     let string = "FOO".to_string();
-    println!("{:?}", ansi_to_text(string.bytes()).unwrap());
+
+    let text = ansi_to_text(string.bytes()).unwrap();
+    println!("{:#?}", &text);
+
+    let expecting = Text::raw("FOO");
+    assert_eq!(text, expecting);
 }
 
 #[test]
@@ -34,23 +49,57 @@ fn test_unicode() {
     // these are 8 byte unicode charachters
     // first 4 bytes are for the unicode and the last 4 bytes are for the color / variant
     let bytes = "AAA🅱️🅱️🅱️".as_bytes().to_vec();
-    println!("{:?}", ansi_to_text(bytes));
+
+    let text = ansi_to_text(bytes).unwrap();
+    println!("{:#?}", &text);
+
+    let expecting = Text::raw("AAA🅱️🅱️🅱️");
+    assert_eq!(text, expecting);
 }
 
 #[test]
 fn test_ascii_rgb() {
     let bytes: Vec<u8> = b"\x1b[38;2;100;100;100mAAABBB".to_vec();
-    println!("{:#?}", ansi_to_text(bytes));
+
+    let text = ansi_to_text(bytes).unwrap();
+    println!("{:#?}", &text);
+
+    let expecting = Text::styled("AAABBB", Style::default().fg(Color::Rgb(100, 100, 100)));
+    assert_eq!(text, expecting);
 }
 #[test]
 fn test_ascii_multi() {
     let bytes = "\x1b[31m\x1b[4m\x1b[1mHELLO".as_bytes().to_vec();
-    println!("{:#?}", ansi_to_text(bytes));
+
+    let text = ansi_to_text(bytes).unwrap();
+    println!("{:#?}", &text);
+
+    let expecting = Text::styled(
+        "HELLO",
+        Style::default()
+            .fg(Color::Red)
+            .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+    );
+    assert_eq!(text, expecting);
 }
 #[test]
 fn test_ascii_newlines() {
     let bytes = "LINE_1\n\n\n\n\n\n\nLINE_8".as_bytes().to_vec();
-    println!("{:#?}", ansi_to_text(bytes));
+
+    let text = ansi_to_text(bytes).unwrap();
+    println!("{:#?}", &text);
+
+    let expecting = Text::from(vec![
+        Spans::from(vec![Span::styled("LINE_1", Style::default())]),
+        Spans::from(vec![]),
+        Spans::from(vec![]),
+        Spans::from(vec![]),
+        Spans::from(vec![]),
+        Spans::from(vec![]),
+        Spans::from(vec![]),
+        Spans::from(vec![Span::styled("LINE_8", Style::default())]),
+    ]);
+    assert_eq!(text, expecting);
 }
 
 #[test]
@@ -101,9 +150,16 @@ fn test_command() {
 }
 
 #[test]
-#[ignore]
 fn test_reset() {
     let string = "\x1b[33mA\x1b[0mB";
     println!("{:?}\n\n", string);
-    println!("{:#?}", ansi_to_text(string.bytes()));
+
+    let text = ansi_to_text(string.bytes()).unwrap();
+    println!("{:#?}", &text);
+
+    let expecting = Text::from(Spans::from(vec![
+        Span::styled("A", Style::default().fg(Color::Yellow)),
+        Span::styled("B", Style::default()),
+    ]));
+    assert_eq!(text, expecting);
 }
