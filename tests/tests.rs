@@ -159,7 +159,7 @@ fn test_reset() {
 
     let expecting = Text::from(Spans::from(vec![
         Span::styled("A", Style::default().fg(Color::Yellow)),
-        Span::styled("B", Style::default()),
+        Span::from("B"),
     ]));
     assert_eq!(text, expecting);
 }
