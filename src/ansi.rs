@@ -31,7 +31,8 @@ use tui::{
 pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>, Error> {
     // let reader = bytes.as_ref().iter().copied(); // copies the whole buffer to memory
     let reader = bytes.into_iter();
-    // let _read = bytes.as_ref().into_iter();
+
+    let reader = reader.chain(std::iter::once(0u8)); // https://github.com/uttarayan21/ansi-to-tui/pull/14
 
     let mut buffer: Vec<Spans> = Vec::new();
     let mut line_buffer: Vec<u8> = Vec::new(); // this contains all the text in a single styled ( including utf-8 )
@@ -152,6 +153,8 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
         line_styled_buffer.clear();
     }
 
+    line_buffer.pop(); // See https://github.com/uttarayan21/ansi-to-tui/pull/14
+
     if !line_buffer.is_empty() {
         span_buffer.push(Span::styled(
             #[cfg(feature = "simd")]
@@ -162,6 +165,7 @@ pub fn ansi_to_text<'t, B: IntoIterator<Item = u8>>(bytes: B) -> Result<Text<'t>
         ));
         line_buffer.clear();
     }
+
     if !span_buffer.is_empty() {
         buffer.push(Spans::from(span_buffer));
         // span_buffer.clear();
