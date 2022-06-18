@@ -16,7 +16,7 @@ exclude = [
 
 [dependencies]
 simdutf8 = { version = "0.1.1", optional = true }
-tui = { version = "0.17.0", default-features = false }
+tui = { version = "0.18.0", default-features = false }
 
 [dev-dependencies]
 anyhow = "1.0.40"
