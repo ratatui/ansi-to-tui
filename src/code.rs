@@ -1,14 +1,12 @@
-// use crate::color::Color;
 use tui::style::Color;
 
 /// This enum stores most types of ansi escape sequences  
 ///
 /// You can turn an escape sequence to this enum variant using
-/// from(u8) trait.  
+/// AnsiCode::from(code: u8)
 /// This doesn't support all of them but does support most of them.  
 
-#[derive(Debug, PartialEq)]
-#[repr(u8)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum AnsiCode {
     /// Reset the terminal
     Reset,
