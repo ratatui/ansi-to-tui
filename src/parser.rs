@@ -76,15 +76,11 @@ impl From<AnsiStates> for tui::style::Style {
 pub(crate) fn text(mut s: &[u8]) -> IResult<&[u8], Text<'static>> {
     let mut line_spans = Vec::new();
     let mut last = Default::default();
-    loop {
-        if let Ok((_s, (spans, style))) = spans(last)(s) {
-            line_spans.push(spans);
-            last = style;
-            s = _s;
-            if s.is_empty() {
-                break;
-            }
-        } else {
+    while let Ok((_s, (spans, style))) = spans(last)(s) {
+        line_spans.push(spans);
+        last = style;
+        s = _s;
+        if s.is_empty() {
             break;
         }
     }
@@ -142,14 +138,26 @@ fn style(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Style, nom::error::Er
     move |s: &[u8]| -> IResult<&[u8], Style> {
         let (s, _) = tag("\x1b[")(s)?;
         let (s, r) = separated_list0(tag(";"), ansi_item)(s)?;
-        let (s, _) = tag("m")(s)?;
+        // the ones ending with m are styles and the ones ending with h are screen mode escapes
+        let (s, _) = alt((char('m'), alt((char('h'), char('l')))))(s)?;
         Ok((s, Style::from(AnsiStates { style, items: r })))
     }
 }
 
 /// An ansi item is a code with a possible color.
 fn ansi_item(s: &[u8]) -> IResult<&[u8], AnsiItem> {
+    // Screen escape modes start with '?' or '=' or non-number
+    let (s, nc) = opt(alt((char('?'), char('='))))(s)?;
     let (mut s, c) = i64(s)?;
+    if let Some(nc) = nc {
+        return Ok((
+            s,
+            AnsiItem {
+                code: AnsiCode::Code(vec![nc as u8]),
+                color: None,
+            },
+        ));
+    }
     let code = AnsiCode::from(c as u8);
     let color = if matches!(
         code,

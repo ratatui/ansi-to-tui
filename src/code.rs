@@ -6,7 +6,8 @@ use tui::style::Color;
 /// AnsiCode::from(code: u8)
 /// This doesn't support all of them but does support most of them.  
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
+#[non_exhaustive]
 pub enum AnsiCode {
     /// Reset the terminal
     Reset,
@@ -65,6 +66,8 @@ pub enum AnsiCode {
     SetBackgroundColor,
     /// Default background color
     DefaultBackgroundColor, // 49
+    /// Other / non supported escape codes
+    Code(Vec<u8>),
 }
 
 impl From<u8> for AnsiCode {
@@ -113,7 +116,7 @@ impl From<u8> for AnsiCode {
             47 => AnsiCode::BackgroundColor(Color::Gray),
             48 => AnsiCode::SetBackgroundColor,
             49 => AnsiCode::DefaultBackgroundColor,
-            _ => AnsiCode::Reset,
+            code => AnsiCode::Code(vec![code]),
         }
     }
 }
