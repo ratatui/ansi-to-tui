@@ -140,6 +140,16 @@ fn test_reset() {
     assert_eq!(string.into_text(), output);
 }
 
+#[test]
+fn test_screen_modes() {
+    let bytes: Vec<u8> = b"\x1b[?25hAAABBB".to_vec();
+    let output = Ok(Text::from(Spans::from(Span::styled(
+        "AAABBB", // or "AAABBB"
+        Style::default(),
+    ))));
+    assert_eq!(bytes.into_text(), output);
+}
+
 fn some_text(s: &'static str) -> Result<Text<'static>, ansi_to_tui::Error> {
     Ok(Text {
         lines: vec![Spans(vec![Span {
@@ -148,3 +158,4 @@ fn some_text(s: &'static str) -> Result<Text<'static>, ansi_to_tui::Error> {
         }])],
     })
 }
+
