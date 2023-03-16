@@ -179,3 +179,15 @@ fn some_text(s: &'static str) -> Result<Text<'static>, ansi_to_tui::Error> {
         }])],
     })
 }
+
+#[test]
+fn empty_span() {
+    let bytes: Vec<u8> = b"\x1b[33m\x1b[31m\x1b[32mHello\x1b[0mWorld".to_vec();
+    let output = Ok(Text::from(Spans::from(vec![
+        Span::styled("", Style::default().fg(Color::Yellow)), // Not sure whether to keep this or
+                                                              // remove it somehow
+        Span::styled("Hello", Style::default().fg(Color::Green)),
+        Span::styled("World", Style::default()),
+    ])));
+    assert_eq!(bytes.into_text(), output);
+}
