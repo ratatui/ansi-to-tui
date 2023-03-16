@@ -96,8 +96,11 @@ fn spans(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Spans<'static>, Styl
         let mut spans = Vec::new();
         let mut last = style;
         while let Ok((s, span)) = span(last)(text) {
-            last = span.style;
-            spans.push(span);
+            // Don't include empty spans but keep changing the style
+            last = last.patch(span.style);
+            if spans.is_empty() || span.content != "" {
+                spans.push(span);
+            }
             text = s;
             if text.is_empty() {
                 break;
