@@ -5,13 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 2.0.1 (2023-03-16)
+## Unreleased
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 9 commits contributed to the release over the course of 214 calendar days.
+ - 10 commits contributed to the release over the course of 214 calendar days.
  - 238 days passed between releases.
  - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Adjusting changelogs prior to release of ansi-to-tui v2.0.1 ([`87fe3a0`](https://github.com/uttarayan21/ansi-to-tui/commit/87fe3a0b8d68fccc582eeeccf9d567c1f94b665d))
     - [feat] CHANGELOGS Using cargo changelog ([`3bc3d4b`](https://github.com/uttarayan21/ansi-to-tui/commit/3bc3d4b7811184d0779b73336e9e5f948844b71a))
     - [fix] Bump version prep for release ([`2f18e2f`](https://github.com/uttarayan21/ansi-to-tui/commit/2f18e2faf4ce0937110592e306be1a3bcb0c1733))
     - Add fg/bg colors for 90-110 ANSI code range ([`1bd18a9`](https://github.com/uttarayan21/ansi-to-tui/commit/1bd18a9ab1424d2a1bd785515384aab4d58f07cf))
@@ -33,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - [update] Version bump ([`0f2ace5`](https://github.com/uttarayan21/ansi-to-tui/commit/0f2ace5449fce46fbf891e4899afc27226f3932e))
     - [fix] Don't hang on screen modes ([`189d9c5`](https://github.com/uttarayan21/ansi-to-tui/commit/189d9c5021e8b69c046be4a4c2cd78095154dc45))
 </details>
+
+## 2.0.1 (2023-03-16)
 
 ## v1.0.1 (2022-07-20)
 
