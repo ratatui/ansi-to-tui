@@ -150,6 +150,27 @@ fn test_screen_modes() {
     assert_eq!(bytes.into_text(), output);
 }
 
+#[test]
+fn test_cursor_shape_and_color() {
+    let bytes: Vec<u8> = b"\x1b[4 q\x1b]12;#fab1ed\x07".to_vec();
+    let output = Ok(Text::from(Spans::from(Span::styled("", Style::default()))));
+    assert_eq!(bytes.into_text(), output);
+}
+
+#[test]
+fn test_malformed_simple() {
+    let bytes: Vec<u8> = b"\x1b[".to_vec();
+    let output = Ok(Text::from(Spans::from(Span::styled("", Style::default()))));
+    assert_eq!(bytes.into_text(), output);
+}
+
+#[test]
+fn test_malformed_complex() {
+    let bytes: Vec<u8> = b"\x1b\x1b[0\x1b[m\x1b".to_vec();
+    let output = Ok(Text::from(Spans::from(Span::styled("", Style::default()))));
+    assert_eq!(bytes.into_text(), output);
+}
+
 fn some_text(s: &'static str) -> Result<Text<'static>, ansi_to_tui::Error> {
     Ok(Text {
         lines: vec![Spans(vec![Span {
@@ -159,3 +180,14 @@ fn some_text(s: &'static str) -> Result<Text<'static>, ansi_to_tui::Error> {
     })
 }
 
+#[test]
+fn empty_span() {
+    let bytes: Vec<u8> = b"\x1b[33m\x1b[31m\x1b[32mHello\x1b[0mWorld".to_vec();
+    let output = Ok(Text::from(Spans::from(vec![
+        Span::styled("", Style::default().fg(Color::Yellow)), // Not sure whether to keep this or
+                                                              // remove it somehow
+        Span::styled("Hello", Style::default().fg(Color::Green)),
+        Span::styled("World", Style::default()),
+    ])));
+    assert_eq!(bytes.into_text(), output);
+}

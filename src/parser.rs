@@ -3,11 +3,12 @@ use nom::{
     branch::alt,
     bytes::complete::*,
     character::complete::*,
+    character::is_alphabetic,
     combinator::{map_res, opt, recognize, value},
     error,
     error::FromExternalError,
     multi::*,
-    sequence::tuple,
+    sequence::{delimited, preceded, tuple},
     IResult, Parser,
 };
 use std::str::FromStr;
@@ -94,10 +95,12 @@ fn spans(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Spans<'static>, Styl
         let (s, _) = opt(tag("\n"))(s)?;
         let mut spans = Vec::new();
         let mut last = style;
-        loop {
-            let (s, span) = span(last)(text)?;
-            last = span.style;
-            spans.push(span);
+        while let Ok((s, span)) = span(last)(text) {
+            // Don't include empty spans but keep changing the style
+            last = last.patch(span.style);
+            if spans.is_empty() || span.content != "" {
+                spans.push(span);
+            }
             text = s;
             if text.is_empty() {
                 break;
@@ -113,6 +116,7 @@ fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::err
     move |s: &[u8]| -> IResult<&[u8], Span<'static>> {
         let mut last = last;
         let (s, style) = opt(style(last))(s)?;
+
         #[cfg(feature = "simd")]
         let (s, text) = map_res(take_while(|c| c != b'\x1b' | b'\n'), |t| {
             simdutf8::basic::from_utf8(t)
@@ -134,41 +138,59 @@ fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::err
         Ok((s, Span::styled(text.to_owned(), last)))
     }
 }
+
 fn style(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Style, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], Style> {
-        let (s, _) = tag("\x1b[")(s)?;
-        let (s, r) = separated_list0(tag(";"), ansi_item)(s)?;
-        // the ones ending with m are styles and the ones ending with h are screen mode escapes
-        let (s, _) = alt((char('m'), alt((char('h'), char('l')))))(s)?;
+        let (s, r) = match opt(ansi_sgr_code)(s)? {
+            (s, Some(r)) => (s, r),
+            (s, None) => {
+                let (s, _) = any_escape_sequence(s)?;
+                (s, Vec::new())
+            }
+        };
         Ok((s, Style::from(AnsiStates { style, items: r })))
     }
 }
 
-/// An ansi item is a code with a possible color.
-fn ansi_item(s: &[u8]) -> IResult<&[u8], AnsiItem> {
-    // Screen escape modes start with '?' or '=' or non-number
-    let (s, nc) = opt(alt((char('?'), char('='))))(s)?;
-    let (mut s, c) = i64(s)?;
-    if let Some(nc) = nc {
-        return Ok((
-            s,
-            AnsiItem {
-                code: AnsiCode::Code(vec![nc as u8]),
-                color: None,
-            },
-        ));
-    }
-    let code = AnsiCode::from(c as u8);
-    let color = if matches!(
-        code,
-        AnsiCode::SetBackgroundColor | AnsiCode::SetForegroundColor
-    ) {
-        let (_s, _) = opt(tag(";"))(s)?;
-        let (_s, color) = color(_s)?;
-        s = _s;
-        Some(color)
-    } else {
-        None
+/// A complete ANSI SGR code
+fn ansi_sgr_code(s: &[u8]) -> IResult<&[u8], Vec<AnsiItem>, nom::error::Error<&[u8]>> {
+    delimited(
+        tag("\x1b["),
+        separated_list1(tag(";"), ansi_sgr_item),
+        char('m'),
+    )(s)
+}
+
+fn any_escape_sequence(s: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
+    // Attempt to consume most escape codes, including a single escape char.
+    //
+    // Most escape codes begin with ESC[ and are terminated by an alphabetic character,
+    // but OSC codes begin with ESC] and are terminated by an ascii bell (\x07)
+    // and a truncated/invalid code may just be a standalone ESC or not be terminated.
+    //
+    // We should try to consume as much of it as possible to match behavior of most terminals;
+    // where we fail at that we should at least consume the escape char to avoid infinitely looping
+
+    preceded(
+        char('\x1b'),
+        opt(alt((
+            delimited(char('['), take_till(|c| is_alphabetic(c)), opt(take(1u8))),
+            delimited(char(']'), take_till(|c| c == b'\x07'), opt(take(1u8))),
+        ))),
+    )(s)
+}
+
+/// An ANSI SGR attribute
+fn ansi_sgr_item(s: &[u8]) -> IResult<&[u8], AnsiItem> {
+    let (s, c) = u8(s)?;
+    let code = AnsiCode::from(c);
+    let (s, color) = match code {
+        AnsiCode::SetForegroundColor | AnsiCode::SetBackgroundColor => {
+            let (s, _) = opt(tag(";"))(s)?;
+            let (s, color) = color(s)?;
+            (s, Some(color))
+        }
+        _ => (s, None),
     };
     Ok((s, AnsiItem { code, color }))
 }
