@@ -18,5 +18,5 @@ let buffer = std::fs::read("ascii/text.ascii").unwrap();
 let output = buffer.into_text();
 ```
 
-[Text]: https://docs.rs/tui/main/ratatui/text/struct.Text.html
+[Text]: https://docs.rs/ratatui/latest/ratatui/text/struct.Text.html
 [ansi-to-tui]: https://github.com/uttarayan21/ansi-to-tui

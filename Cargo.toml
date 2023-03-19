@@ -1,6 +1,6 @@
 [package]
 name = "ansi-to-tui"
-version = "2.0.2"
+version = "3.0.0"
 authors = ["Uttarayan Mondal <email@uttarayan.me>"]
 edition = "2018"
 description = "A library to convert ansi color coded text into ratatui::text::Text type from ratatui library"
