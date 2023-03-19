@@ -3,7 +3,7 @@ name = "ansi-to-tui"
 version = "2.0.2"
 authors = ["Uttarayan Mondal <email@uttarayan.me>"]
 edition = "2018"
-description = "A library to convert ansi color coded text into tui::text::Text type from tui-rs library"
+description = "A library to convert ansi color coded text into ratatui::text::Text type from ratatui library"
 keywords = ["ansi", "ascii", "tui", "parser"]
 license = "MIT"
 readme = "README.md"
@@ -12,7 +12,7 @@ repository = "https://github.com/uttarayan21/ansi-to-tui"
 [dependencies]
 nom = "7.1"
 simdutf8 = { version = "0.1", optional = true }
-tui = { version = "0.*", default-features = false }
+tui = { version = "0.*", default-features = false, package = "ratatui" }
 thiserror = "1.0"
 
 [dev-dependencies]
