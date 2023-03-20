@@ -61,7 +61,7 @@ impl From<AnsiStates> for tui::style::Style {
                 }
                 AnsiCode::SetBackgroundColor => {
                     if let Some(color) = item.color {
-                        style = style.fg(color)
+                        style = style.bg(color)
                     }
                 }
                 AnsiCode::ForegroundColor(color) => style = style.fg(color),
