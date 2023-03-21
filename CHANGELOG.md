@@ -5,13 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 3.0.0 (2023-03-21)
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 5 commits contributed to the release.
+ - 6 commits contributed to the release.
  - 5 days passed between releases.
  - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - [update] Changelog and readme ([`8b38176`](https://github.com/sayanarijit/ansi-to-tui/commit/8b38176c630fe6d5c9502c3bc8b53f0f0eb25efe))
     - Update version ([`7617608`](https://github.com/sayanarijit/ansi-to-tui/commit/761760805afad70709b2158b04789b31ac4f12fc))
     - Move to ratatui ([`0446f08`](https://github.com/sayanarijit/ansi-to-tui/commit/0446f08857469fbcb770af125a3abd637ea1f777))
     - [feat] Bump version and update CHANGELOG.md ([`eec6f86`](https://github.com/sayanarijit/ansi-to-tui/commit/eec6f86e6ad66196370cb350f4451c829d6c5bb1))
@@ -83,6 +84,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Complete rewrite of the whole parser logic ([`0e28929`](https://github.com/sayanarijit/ansi-to-tui/commit/0e289299a123635185f9907a01a379a51009f52b))
 </details>
 
+## v0.5.0 (2022-01-27)
+
 ## 0.5.0-sayanarijit (2022-01-27)
 
 ### Commit Statistics
@@ -106,8 +109,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Add drone build badge ([`2871347`](https://github.com/sayanarijit/ansi-to-tui/commit/28713475a094612bf894603c720095a243801b24))
     - Add .drone.yml ([`e08a9d8`](https://github.com/sayanarijit/ansi-to-tui/commit/e08a9d8281bcbc31a419b33897c79e62544acd98))
 </details>
-
-## v0.5.0 (2022-01-27)
 
 ## v0.4.1 (2021-09-28)
 
