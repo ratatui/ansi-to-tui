@@ -4,6 +4,9 @@
 
 A nom parser to parse text with ANSI color codes and turn them into [`ratatui::text::Text`][Text].
 
+For people still using [tui-rs](docs.rs/tui) use version `v2.*` for people migrating to [ratatui](docs.rs/ratatui) use version `v3.*`
+I recommend switching over to ratatui since tui-rs is currently unmaintained.
+
 | Color  | Supported | Examples                 |
 | ------ | :-------: | ------------------------ |
 | 24 bit |     ✓     | `\x1b[38;2;<R>;<G>;<B>m` |
