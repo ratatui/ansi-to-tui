@@ -1,6 +1,6 @@
 [package]
 name = "ansi-to-tui"
-version = "2.0.1"
+version = "2.0.2"
 authors = ["Uttarayan Mondal <email@uttarayan.me>"]
 edition = "2018"
 description = "A library to convert ansi color coded text into tui::text::Text type from tui-rs library"
