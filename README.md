@@ -1,6 +1,8 @@
 # ansi-to-tui
 
-![drone build](https://img.shields.io/drone/build/uttarayan21/ansi-to-tui?server=https%3A%2F%2Fdrone.uttarayan.me)] [![github build](https://github.com/uttarayan21/ansi-to-tui/actions/workflows/build.yaml/badge.svg)][ansi-to-tui] [![downloads](https://img.shields.io/crates/d/ansi-to-tui)](https://crates.io/crates/ansi-to-tui)
+![drone build](https://img.shields.io/drone/build/uttarayan21/ansi-to-tui?server=https%3A%2F%2Fdrone.uttarayan.me)
+[![github build](https://github.com/uttarayan21/ansi-to-tui/actions/workflows/build.yaml/badge.svg)][ansi-to-tui]
+[![downloads](https://img.shields.io/crates/d/ansi-to-tui)](https://crates.io/crates/ansi-to-tui)
 
 A nom parser to parse text with ANSI color codes and turn them into [`ratatui::text::Text`][Text].
 
