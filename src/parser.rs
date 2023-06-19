@@ -14,7 +14,7 @@ use nom::{
 use std::str::FromStr;
 use tui::{
     style::{Color, Modifier, Style},
-    text::{Span, Spans, Text},
+    text::{Line, Span, Text},
 };
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -75,22 +75,22 @@ impl From<AnsiStates> for tui::style::Style {
 }
 
 pub(crate) fn text(mut s: &[u8]) -> IResult<&[u8], Text<'static>> {
-    let mut line_spans = Vec::new();
+    let mut lines = Vec::new();
     let mut last = Default::default();
-    while let Ok((_s, (spans, style))) = spans(last)(s) {
-        line_spans.push(spans);
+    while let Ok((_s, (line, style))) = line(last)(s) {
+        lines.push(line);
         last = style;
         s = _s;
         if s.is_empty() {
             break;
         }
     }
-    Ok((s, Text::from(line_spans)))
+    Ok((s, Text::from(lines)))
 }
 
-fn spans(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Spans<'static>, Style)> {
+fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)> {
     // let style_: Style = Default::default();
-    move |s: &[u8]| -> IResult<&[u8], (Spans<'static>, Style)> {
+    move |s: &[u8]| -> IResult<&[u8], (Line<'static>, Style)> {
         let (s, mut text) = take_while(|c| c != b'\n')(s)?;
         let (s, _) = opt(tag("\n"))(s)?;
         let mut spans = Vec::new();
@@ -112,7 +112,7 @@ fn spans(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Spans<'static>, Styl
             }
         }
 
-        Ok((s, (Spans(spans), last)))
+        Ok((s, (Line::from(spans), last)))
     }
 }
 
