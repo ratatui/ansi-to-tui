@@ -48,6 +48,7 @@ pub trait IntoText {
     /// Convert the type to a Text.
     fn into_text(&self) -> Result<Text<'static>, Error>;
     /// Convert the type to a Text while trying to copy as less as possible
+    #[cfg(feature = "zero-copy")]
     fn to_text(&self) -> Result<Text<'_>, Error>;
 }
 impl<T> IntoText for T
@@ -58,7 +59,8 @@ where
         Ok(crate::parser::text(self.as_ref())?.1)
     }
 
+    #[cfg(feature = "zero-copy")]
     fn to_text(&self) -> Result<Text<'_>, Error> {
-        Ok(crate::parser::text_zc(self.as_ref())?.1)
+        Ok(crate::parser::text_fast(self.as_ref())?.1)
     }
 }

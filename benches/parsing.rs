@@ -2,7 +2,11 @@ pub use ansi_to_tui::IntoText;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 fn criterion_benchmark(c: &mut Criterion) {
-    const BASIC: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/ascii/arch.ascii"));
+    const BASIC: &[u8] = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/ascii/archlinux.ascii"
+    ));
+    #[cfg(feature = "zero-copy")]
     c.bench_function("Parsing bench zero copy", |b| {
         b.iter(|| {
             let s = black_box(&BASIC);
