@@ -33,7 +33,7 @@ struct AnsiItem {
 
 #[derive(Debug, Clone, PartialEq)]
 struct AnsiStates {
-    pub items: smallvec::SmallVec<[AnsiItem; 5]>,
+    pub items: smallvec::SmallVec<[AnsiItem; 2]>,
     pub style: Style,
 }
 
@@ -88,10 +88,11 @@ pub(crate) fn text(mut s: &[u8]) -> IResult<&[u8], Text<'static>> {
     Ok((s, Text::from(lines)))
 }
 
-pub(crate) fn text_zc(mut s: &[u8]) -> IResult<&[u8], Text<'_>> {
+#[cfg(feature = "zero-copy")]
+pub(crate) fn text_fast(mut s: &[u8]) -> IResult<&[u8], Text<'_>> {
     let mut lines = Vec::new();
     let mut last = Default::default();
-    while let Ok((_s, (line, style))) = line_zc(last)(s) {
+    while let Ok((_s, (line, style))) = line_fast(last)(s) {
         lines.push(line);
         last = style;
         s = _s;
@@ -130,14 +131,15 @@ fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)
     }
 }
 
-fn line_zc(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'_>, Style)> {
+#[cfg(feature = "zero-copy")]
+fn line_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'_>, Style)> {
     // let style_: Style = Default::default();
     move |s: &[u8]| -> IResult<&[u8], (Line<'_>, Style)> {
         let (s, mut text) = take_while(|c| c != b'\n')(s)?;
         let (s, _) = opt(tag("\n"))(s)?;
         let mut spans = Vec::new();
         let mut last = style;
-        while let Ok((s, span)) = span_zc(last)(text) {
+        while let Ok((s, span)) = span_fast(last)(text) {
             if span.style == Style::default() && span.content.is_empty() {
                 // Reset styles
                 last = Style::default();
@@ -186,7 +188,8 @@ fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::err
     }
 }
 
-fn span_zc(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::error::Error<&[u8]>> {
+#[cfg(feature = "zero-copy")]
+fn span_fast(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], Span<'_>> {
         let mut last = last;
         let (s, style) = opt(style_fast(last))(s)?;
@@ -232,9 +235,10 @@ fn style(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Style, nom::error::Er
     }
 }
 
+#[cfg(feature = "zero-copy")]
 fn style_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Style, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], Style> {
-        let (s, r) = match opt(ansi_sgr_code_small)(s)? {
+        let (s, r) = match opt(ansi_sgr_code_fast)(s)? {
             (s, Some(r)) => (s, r),
             (s, None) => {
                 let (s, _) = any_escape_sequence(s)?;
@@ -254,19 +258,16 @@ fn ansi_sgr_code(s: &[u8]) -> IResult<&[u8], Vec<AnsiItem>, nom::error::Error<&[
     )(s)
 }
 
-fn ansi_sgr_code_small(
+#[cfg(feature = "zero-copy")]
+fn ansi_sgr_code_fast(
     s: &[u8],
-) -> IResult<&[u8], smallvec::SmallVec<[AnsiItem; 5]>, nom::error::Error<&[u8]>> {
+) -> IResult<&[u8], smallvec::SmallVec<[AnsiItem; 2]>, nom::error::Error<&[u8]>> {
     delimited(
         tag("\x1b["),
-        fold_many1(
-            terminated(ansi_sgr_item, tag(";")),
-            smallvec::SmallVec::new,
-            |mut items, item| {
-                items.push(item);
-                items
-            },
-        ),
+        fold_many1(ansi_sgr_item, smallvec::SmallVec::new, |mut items, item| {
+            items.push(item);
+            items
+        }),
         char('m'),
     )(s)
 }
@@ -302,6 +303,7 @@ fn ansi_sgr_item(s: &[u8]) -> IResult<&[u8], AnsiItem> {
         }
         _ => (s, None),
     };
+    let (s, _) = opt(tag(";"))(s)?;
     Ok((s, AnsiItem { code, color }))
 }
 
