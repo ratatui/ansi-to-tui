@@ -18,7 +18,14 @@ smallvec = { version = "1.10.0", features = ["const_generics"] }
 
 [dev-dependencies]
 anyhow = "1.0"
+criterion = "0.4"
 
 [features]
 simd = ["simdutf8"]
 zero-copy = []
+
+
+[[bench]]
+name = "parsing"
+harness = false
+

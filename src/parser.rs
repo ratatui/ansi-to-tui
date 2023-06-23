@@ -8,7 +8,7 @@ use nom::{
     error,
     error::FromExternalError,
     multi::*,
-    sequence::{delimited, preceded, tuple},
+    sequence::{delimited, preceded, terminated, tuple},
     IResult, Parser,
 };
 use std::str::FromStr;
@@ -33,7 +33,7 @@ struct AnsiItem {
 
 #[derive(Debug, Clone, PartialEq)]
 struct AnsiStates {
-    pub items: Vec<AnsiItem>,
+    pub items: smallvec::SmallVec<[AnsiItem; 5]>,
     pub style: Style,
 }
 
@@ -189,7 +189,7 @@ fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::err
 fn span_zc(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], Span<'_>> {
         let mut last = last;
-        let (s, style) = opt(style(last))(s)?;
+        let (s, style) = opt(style_fast(last))(s)?;
 
         #[cfg(feature = "simd")]
         let (s, text) = map_res(take_while(|c| c != b'\x1b' | b'\n'), |t| {
@@ -222,6 +222,25 @@ fn style(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Style, nom::error::Er
                 (s, Vec::new())
             }
         };
+        Ok((
+            s,
+            Style::from(AnsiStates {
+                style,
+                items: r.into(),
+            }),
+        ))
+    }
+}
+
+fn style_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Style, nom::error::Error<&[u8]>> {
+    move |s: &[u8]| -> IResult<&[u8], Style> {
+        let (s, r) = match opt(ansi_sgr_code_small)(s)? {
+            (s, Some(r)) => (s, r),
+            (s, None) => {
+                let (s, _) = any_escape_sequence(s)?;
+                (s, Default::default())
+            }
+        };
         Ok((s, Style::from(AnsiStates { style, items: r })))
     }
 }
@@ -240,7 +259,14 @@ fn ansi_sgr_code_small(
 ) -> IResult<&[u8], smallvec::SmallVec<[AnsiItem; 5]>, nom::error::Error<&[u8]>> {
     delimited(
         tag("\x1b["),
-        fold_many0(tag(";"), ansi_sgr_item),
+        fold_many1(
+            terminated(ansi_sgr_item, tag(";")),
+            smallvec::SmallVec::new,
+            |mut items, item| {
+                items.push(item);
+                items
+            },
+        ),
         char('m'),
     )(s)
 }
@@ -329,6 +355,7 @@ fn ansi_items_test() {
                 code: AnsiCode::SetForegroundColor,
                 color: Some(Color::Rgb(3, 3, 3))
             }]
+            .into()
         })
     );
 }
