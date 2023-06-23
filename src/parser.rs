@@ -88,6 +88,20 @@ pub(crate) fn text(mut s: &[u8]) -> IResult<&[u8], Text<'static>> {
     Ok((s, Text::from(lines)))
 }
 
+pub(crate) fn text_zc(mut s: &[u8]) -> IResult<&[u8], Text<'_>> {
+    let mut lines = Vec::new();
+    let mut last = Default::default();
+    while let Ok((_s, (line, style))) = line_zc(last)(s) {
+        lines.push(line);
+        last = style;
+        s = _s;
+        if s.is_empty() {
+            break;
+        }
+    }
+    Ok((s, Text::from(lines)))
+}
+
 fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)> {
     // let style_: Style = Default::default();
     move |s: &[u8]| -> IResult<&[u8], (Line<'static>, Style)> {
@@ -116,9 +130,64 @@ fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)
     }
 }
 
+fn line_zc(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'_>, Style)> {
+    // let style_: Style = Default::default();
+    move |s: &[u8]| -> IResult<&[u8], (Line<'_>, Style)> {
+        let (s, mut text) = take_while(|c| c != b'\n')(s)?;
+        let (s, _) = opt(tag("\n"))(s)?;
+        let mut spans = Vec::new();
+        let mut last = style;
+        while let Ok((s, span)) = span_zc(last)(text) {
+            if span.style == Style::default() && span.content.is_empty() {
+                // Reset styles
+                last = Style::default();
+            } else {
+                last = last.patch(span.style);
+            }
+            // Don't include empty spans but keep changing the style
+            if spans.is_empty() || !span.content.is_empty() {
+                spans.push(span);
+            }
+            text = s;
+            if text.is_empty() {
+                break;
+            }
+        }
+
+        Ok((s, (Line::from(spans), last)))
+    }
+}
+
 // fn span(s: &[u8]) -> IResult<&[u8], tui::text::Span> {
 fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], Span<'static>> {
+        let mut last = last;
+        let (s, style) = opt(style(last))(s)?;
+
+        #[cfg(feature = "simd")]
+        let (s, text) = map_res(take_while(|c| c != b'\x1b' | b'\n'), |t| {
+            simdutf8::basic::from_utf8(t)
+        })(s)?;
+
+        #[cfg(not(feature = "simd"))]
+        let (s, text) = map_res(take_while(|c| c != b'\x1b' | b'\n'), |t| {
+            std::str::from_utf8(t)
+        })(s)?;
+
+        if let Some(style) = style {
+            if style == Default::default() {
+                last = Default::default();
+            } else {
+                last = last.patch(style);
+            }
+        }
+
+        Ok((s, Span::styled(text.to_owned(), last)))
+    }
+}
+
+fn span_zc(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::error::Error<&[u8]>> {
+    move |s: &[u8]| -> IResult<&[u8], Span<'_>> {
         let mut last = last;
         let (s, style) = opt(style(last))(s)?;
 
@@ -166,6 +235,16 @@ fn ansi_sgr_code(s: &[u8]) -> IResult<&[u8], Vec<AnsiItem>, nom::error::Error<&[
     )(s)
 }
 
+fn ansi_sgr_code_small(
+    s: &[u8],
+) -> IResult<&[u8], smallvec::SmallVec<[AnsiItem; 5]>, nom::error::Error<&[u8]>> {
+    delimited(
+        tag("\x1b["),
+        fold_many0(tag(";"), ansi_sgr_item),
+        char('m'),
+    )(s)
+}
+
 fn any_escape_sequence(s: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
     // Attempt to consume most escape codes, including a single escape char.
     //
@@ -179,7 +258,7 @@ fn any_escape_sequence(s: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
     preceded(
         char('\x1b'),
         opt(alt((
-            delimited(char('['), take_till(|c| is_alphabetic(c)), opt(take(1u8))),
+            delimited(char('['), take_till(is_alphabetic), opt(take(1u8))),
             delimited(char(']'), take_till(|c| c == b'\x07'), opt(take(1u8))),
         ))),
     )(s)
