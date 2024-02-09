@@ -46,13 +46,10 @@ fn test_unicode() {
 #[test]
 fn test_ascii_rgb() {
     let bytes: Vec<u8> = b"\x1b[38;2;100;100;100mAAABBB".to_vec();
-    let output = Ok(Text::styled(
+    let output = Ok(Text::from(Span::styled(
         "AAABBB",
-        Style {
-            fg: Some(Color::Rgb(100, 100, 100)),
-            ..Default::default()
-        },
-    ));
+        Style::default().fg(Color::Rgb(100, 100, 100)),
+    )));
     assert_eq!(bytes.into_text(), output);
 }
 
