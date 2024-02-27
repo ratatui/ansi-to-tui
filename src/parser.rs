@@ -42,7 +42,7 @@ impl From<AnsiStates> for tui::style::Style {
         let mut style = states.style;
         for item in states.items {
             match item.code {
-                AnsiCode::Reset => style = Style::default(),
+                AnsiCode::Reset => style = Style::reset(),
                 AnsiCode::Bold => style = style.add_modifier(Modifier::BOLD),
                 AnsiCode::Faint => style = style.add_modifier(Modifier::DIM),
                 AnsiCode::Italic => style = style.add_modifier(Modifier::ITALIC),

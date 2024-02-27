@@ -1,5 +1,6 @@
 // use ansi_to_tui::{ansi_to_text, ansi_to_text_override_style};
 use ansi_to_tui::IntoText;
+use tui::style::Stylize;
 use tui::{
     style::{Color, Style},
     text::{Line, Span, Text},
@@ -119,7 +120,7 @@ fn test_reset() {
     let string = "\x1b[33mA\x1b[0mB";
     let output = Ok(Text::from(Line::from(vec![
         Span::styled("A", Style::default().fg(Color::Yellow)),
-        Span::raw("B"),
+        Span::styled("B", Style::reset()),
     ])));
     assert_eq!(string.into_text(), output);
 }
@@ -162,8 +163,33 @@ fn empty_span() {
         // Not sure whether to keep this empty span or remove it somehow
         Span::styled("", Style::default().fg(Color::Yellow)),
         Span::styled("Hello", Style::default().fg(Color::Green)),
-        Span::styled("World", Style::default()),
+        Span::styled("World", Style::reset()),
     ])));
+    assert_eq!(bytes.into_text(), output);
+}
+
+#[test]
+fn test_color_and_style_reset() {
+    let bytes: Vec<u8> = String::from(
+        "\u{1b}[32m* \u{1b}[0mRunning before-startup command \u{1b}[1mcommand\u{1b}[0m=make my-simple-package.cabal\n\
+        \u{1b}[32m* \u{1b}[0m$ make my-simple-package.cabal\n\
+        Build profile: -w ghc-9.0.2 -O1\n").into_bytes();
+    let output = Ok(Text::from(vec![
+        Line::from(vec![
+            Span::styled("* ", Style::default().fg(Color::Green)),
+            Span::styled("Running before-startup command ", Style::reset()),
+            Span::styled("command", Style::reset().bold()),
+            Span::styled("=make my-simple-package.cabal", Style::reset()),
+        ]),
+        Line::from(vec![
+            Span::styled("* ", Style::reset().fg(Color::Green)),
+            Span::styled("$ make my-simple-package.cabal", Style::reset()),
+        ]),
+        Line::from(vec![Span::styled(
+            "Build profile: -w ghc-9.0.2 -O1",
+            Style::reset(),
+        )]),
+    ]));
     assert_eq!(bytes.into_text(), output);
 }
 
@@ -262,7 +288,7 @@ mod zero_copy {
         let string = "\x1b[33mA\x1b[0mB";
         let output = Ok(Text::from(Line::from(vec![
             Span::styled("A", Style::default().fg(Color::Yellow)),
-            Span::raw("B"),
+            Span::styled("B", Style::reset()),
         ])));
         assert_eq!(string.to_text(), output);
     }
@@ -305,8 +331,33 @@ mod zero_copy {
             // Not sure whether to keep this empty span or remove it somehow
             Span::styled("", Style::default().fg(Color::Yellow)),
             Span::styled("Hello", Style::default().fg(Color::Green)),
-            Span::styled("World", Style::default()),
+            Span::styled("World", Style::reset()),
         ])));
         assert_eq!(bytes.to_text(), output);
+    }
+
+    #[test]
+    fn test_color_and_style_reset() {
+        let bytes: Vec<u8> = String::from(
+            "\u{1b}[32m* \u{1b}[0mRunning before-startup command \u{1b}[1mcommand\u{1b}[0m=make my-simple-package.cabal\n\
+            \u{1b}[32m* \u{1b}[0m$ make my-simple-package.cabal\n\
+            Build profile: -w ghc-9.0.2 -O1\n").into_bytes();
+        let output = Ok(Text::from(vec![
+            Line::from(vec![
+                Span::styled("* ", Style::default().fg(Color::Green)),
+                Span::styled("Running before-startup command ", Style::reset()),
+                Span::styled("command", Style::reset().bold()),
+                Span::styled("=make my-simple-package.cabal", Style::reset()),
+            ]),
+            Line::from(vec![
+                Span::styled("* ", Style::reset().fg(Color::Green)),
+                Span::styled("$ make my-simple-package.cabal", Style::reset()),
+            ]),
+            Line::from(vec![Span::styled(
+                "Build profile: -w ghc-9.0.2 -O1",
+                Style::reset(),
+            )]),
+        ]));
+        assert_eq!(bytes.into_text(), output);
     }
 }
