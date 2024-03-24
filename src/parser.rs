@@ -40,6 +40,11 @@ struct AnsiStates {
 impl From<AnsiStates> for tui::style::Style {
     fn from(states: AnsiStates) -> Self {
         let mut style = states.style;
+        if states.items.is_empty() {
+            // https://github.com/uttarayan21/ansi-to-tui/issues/40
+            // [m should be treated as a reset as well
+            style = Style::reset();
+        }
         for item in states.items {
             match item.code {
                 AnsiCode::Reset => style = Style::reset(),
@@ -118,7 +123,7 @@ fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)
                 last = last.patch(span.style);
             }
             // Don't include empty spans but keep changing the style
-            if spans.is_empty() || span.content != "" {
+            if spans.is_empty() || span.content.is_empty() {
                 spans.push(span);
             }
             text = s;
@@ -253,7 +258,7 @@ fn style_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Style, nom::erro
 fn ansi_sgr_code(s: &[u8]) -> IResult<&[u8], Vec<AnsiItem>, nom::error::Error<&[u8]>> {
     delimited(
         tag("\x1b["),
-        separated_list1(tag(";"), ansi_sgr_item),
+        separated_list0(tag(";"), ansi_sgr_item),
         char('m'),
     )(s)
 }
