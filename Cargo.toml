@@ -19,6 +19,7 @@ smallvec = { version = "1.10.0", features = ["const_generics"] }
 [dev-dependencies]
 anyhow = "1.0"
 criterion = "0.5"
+pretty_assertions = "1.4.0"
 
 [features]
 simd = ["dep:simdutf8"]
