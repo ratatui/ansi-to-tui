@@ -116,14 +116,10 @@ fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)
         let mut spans = Vec::new();
         let mut last = style;
         while let Ok((s, span)) = span(last)(text) {
-            if span.style == Style::default() && span.content.is_empty() {
-                // Reset styles
-                last = Style::default();
-            } else {
-                last = last.patch(span.style);
-            }
-            // Don't include empty spans but keep changing the style
-            if spans.is_empty() || span.content.is_empty() {
+            // Since reset now tracks seperately we can skip the reset check
+            last = last.patch(span.style);
+
+            if spans.is_empty() || !span.content.is_empty() {
                 spans.push(span);
             }
             text = s;
@@ -145,13 +141,9 @@ fn line_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'_>, Style)
         let mut spans = Vec::new();
         let mut last = style;
         while let Ok((s, span)) = span_fast(last)(text) {
-            if span.style == Style::default() && span.content.is_empty() {
-                // Reset styles
-                last = Style::default();
-            } else {
-                last = last.patch(span.style);
-            }
-            // Don't include empty spans but keep changing the style
+            last = last.patch(span.style);
+            // If the spans is empty then it might be possible that the style changes
+            // but there is no text change
             if spans.is_empty() || !span.content.is_empty() {
                 spans.push(span);
             }
@@ -181,12 +173,8 @@ fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::err
             std::str::from_utf8(t)
         })(s)?;
 
-        if let Some(style) = style {
-            if style == Default::default() {
-                last = Default::default();
-            } else {
-                last = last.patch(style);
-            }
+        if let Some(style) = style.flatten() {
+            last = last.patch(style);
         }
 
         Ok((s, Span::styled(text.to_owned(), last)))
@@ -209,48 +197,53 @@ fn span_fast(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::err
             std::str::from_utf8(t)
         })(s)?;
 
-        if let Some(style) = style {
-            if style == Default::default() {
-                last = Default::default();
-            } else {
-                last = last.patch(style);
-            }
+        if let Some(style) = style.flatten() {
+            last = last.patch(style);
         }
 
         Ok((s, Span::styled(text.to_owned(), last)))
     }
 }
 
-fn style(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Style, nom::error::Error<&[u8]>> {
-    move |s: &[u8]| -> IResult<&[u8], Style> {
+fn style(
+    style: Style,
+) -> impl Fn(&[u8]) -> IResult<&[u8], Option<Style>, nom::error::Error<&[u8]>> {
+    move |s: &[u8]| -> IResult<&[u8], Option<Style>> {
         let (s, r) = match opt(ansi_sgr_code)(s)? {
-            (s, Some(r)) => (s, r),
+            (s, Some(r)) => (s, Some(r)),
             (s, None) => {
-                let (s, _) = any_escape_sequence(s)?;
-                (s, Vec::new())
+                // This is not a valid style code so we need to consume it
+                // Since we already use opt(style) we can safely return an error here which will
+                // skip that style
+                let (s, _garbage) = any_escape_sequence(s)?;
+                (s, None)
             }
         };
         Ok((
             s,
-            Style::from(AnsiStates {
-                style,
-                items: r.into(),
+            r.map(|r| {
+                Style::from(AnsiStates {
+                    style,
+                    items: r.into(),
+                })
             }),
         ))
     }
 }
 
 #[cfg(feature = "zero-copy")]
-fn style_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Style, nom::error::Error<&[u8]>> {
-    move |s: &[u8]| -> IResult<&[u8], Style> {
+fn style_fast(
+    style: Style,
+) -> impl Fn(&[u8]) -> IResult<&[u8], Option<Style>, nom::error::Error<&[u8]>> {
+    move |s: &[u8]| -> IResult<&[u8], Option<Style>> {
         let (s, r) = match opt(ansi_sgr_code_fast)(s)? {
-            (s, Some(r)) => (s, r),
+            (s, Some(r)) => (s, Some(r)),
             (s, None) => {
                 let (s, _) = any_escape_sequence(s)?;
-                (s, Default::default())
+                (s, None)
             }
         };
-        Ok((s, Style::from(AnsiStates { style, items: r })))
+        Ok((s, r.map(|r| Style::from(AnsiStates { style, items: r }))))
     }
 }
 
@@ -269,7 +262,7 @@ fn ansi_sgr_code_fast(
 ) -> IResult<&[u8], smallvec::SmallVec<[AnsiItem; 2]>, nom::error::Error<&[u8]>> {
     delimited(
         tag("\x1b["),
-        fold_many1(ansi_sgr_item, smallvec::SmallVec::new, |mut items, item| {
+        fold_many0(ansi_sgr_item, smallvec::SmallVec::new, |mut items, item| {
             items.push(item);
             items
         }),
@@ -287,13 +280,14 @@ fn any_escape_sequence(s: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
     // We should try to consume as much of it as possible to match behavior of most terminals;
     // where we fail at that we should at least consume the escape char to avoid infinitely looping
 
-    preceded(
+    let (input, garbage) = preceded(
         char('\x1b'),
         opt(alt((
             delimited(char('['), take_till(is_alphabetic), opt(take(1u8))),
             delimited(char(']'), take_till(|c| c == b'\x07'), opt(take(1u8))),
         ))),
-    )(s)
+    )(s)?;
+    Ok((input, garbage))
 }
 
 /// An ANSI SGR attribute
@@ -353,9 +347,9 @@ fn color_test() {
 #[test]
 fn ansi_items_test() {
     let sc = Default::default();
-    let t = style(sc)(b"\x1b[38;2;3;3;3m").unwrap();
+    let t = style(sc)(b"\x1b[38;2;3;3;3m").unwrap().1.unwrap();
     assert_eq!(
-        t.1,
+        t,
         Style::from(AnsiStates {
             style: sc,
             items: vec![AnsiItem {

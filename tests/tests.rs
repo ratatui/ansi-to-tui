@@ -1,5 +1,6 @@
 // use ansi_to_tui::{ansi_to_text, ansi_to_text_override_style};
 use ansi_to_tui::IntoText;
+use pretty_assertions::assert_eq;
 use tui::style::Stylize;
 use tui::{
     style::{Color, Style},
@@ -27,6 +28,20 @@ use tui::{
 //     // ansi_to_text(string.bytes()).unwrap();
 //     println!("{:#?}", ansi_to_text(string.bytes()));
 // }
+
+#[test]
+fn test_empty_op() {
+    use ansi_to_tui::IntoText;
+    let string = b"\x1b[32mGREEN\x1b[mFOO\nFOO";
+    let output = Text::from(vec![
+        Line::from(vec![
+            Span::styled("GREEN", Style::default().fg(Color::Green)),
+            Span::styled("FOO", Style::reset()),
+        ]),
+        Line::from(Span::styled("FOO", Style::reset())),
+    ]);
+    assert_eq!(string.into_text().unwrap(), output);
+}
 
 #[test]
 fn test_string() {
@@ -137,6 +152,7 @@ fn test_screen_modes() {
 
 #[test]
 fn test_cursor_shape_and_color() {
+    // malformed -> malformed -> empty
     let bytes: Vec<u8> = b"\x1b[4 q\x1b]12;#fab1ed\x07".to_vec();
     let output = Ok(Text::raw(""));
     assert_eq!(bytes.into_text(), output);
@@ -158,13 +174,16 @@ fn test_malformed_complex() {
 
 #[test]
 fn empty_span() {
+    // Yellow -> Red -> Green -> "Hello" -> Reset -> "World"
     let bytes: Vec<u8> = b"\x1b[33m\x1b[31m\x1b[32mHello\x1b[0mWorld".to_vec();
     let output = Ok(Text::from(Line::from(vec![
         // Not sure whether to keep this empty span or remove it somehow
         Span::styled("", Style::default().fg(Color::Yellow)),
+        // Span::styled("", Style::default().fg(Color::Red)),
         Span::styled("Hello", Style::default().fg(Color::Green)),
         Span::styled("World", Style::reset()),
     ])));
+    // dbg!(bytes.clone().into_text().unwrap());
     assert_eq!(bytes.into_text(), output);
 }
 
@@ -196,6 +215,8 @@ fn test_color_and_style_reset() {
 #[cfg(feature = "zero-copy")]
 mod zero_copy {
     use super::*;
+    use pretty_assertions::assert_eq;
+
     #[test]
     fn test_string() {
         use ansi_to_tui::IntoText;
@@ -307,6 +328,7 @@ mod zero_copy {
     fn test_cursor_shape_and_color() {
         let bytes: Vec<u8> = b"\x1b[4 q\x1b]12;#fab1ed\x07".to_vec();
         let output = Ok(Text::raw(""));
+        assert_eq!(bytes.to_text(), bytes.into_text());
         assert_eq!(bytes.to_text(), output);
     }
 
@@ -334,6 +356,7 @@ mod zero_copy {
             Span::styled("World", Style::reset()),
         ])));
         assert_eq!(bytes.to_text(), output);
+        assert_eq!(bytes.to_text(), bytes.clone().into_text());
     }
 
     #[test]
