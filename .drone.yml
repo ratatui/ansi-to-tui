@@ -9,3 +9,7 @@ steps:
     commands:
       - cargo build
       - cargo test
+  - name: Bench
+    image: rust:latest
+    commands:
+      - cargo bench
