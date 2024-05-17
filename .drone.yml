@@ -7,8 +7,8 @@ steps:
   - name: Checks
     image: nixos/nix:master
     commands:
-      - nix flake check
-      - nix build .#checks.x86_64-linux.ansi-to-tui-llvm-coverage
+      - nix --extra-experimental-features "nix-command flakes" flake check
+      - nix --extra-experimental-features "nix-command flakes" build .#checks.x86_64-linux.ansi-to-tui-llvm-coverage
   - name: upload-codecov
     image: robertstettner/drone-codecov
     files: result
