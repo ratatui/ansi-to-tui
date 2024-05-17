@@ -2,7 +2,6 @@ name: Build
 
 on:
   push:
-    branches: [ master ]
   pull_request:
     branches: [ master ]
 
@@ -15,8 +14,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+    - uses: actions/checkout@v3
+
+    - name: Install nix
+      uses: cachix/install-nix-action@v27
+      with:
+        github_access_token: ${{ secrets.GITHUB_TOKEN }}
+    - run: nix flake check
+    - run: nix --extra-experimental-features "nix-command flakes" build .#checks.x86_64-linux.ansi-to-tui-llvm-coverage
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4.0.1
+      with:
+        flags: unittests
+        name: codecov-ansi-to-tui
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./result
+        verbose: true
