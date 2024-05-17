@@ -46,6 +46,7 @@ use tui::text::Text;
 /// IntoText will convert any type that has a AsRef<[u8]> to a Text.
 pub trait IntoText {
     /// Convert the type to a Text.
+    #[allow(clippy::wrong_self_convention)]
     fn into_text(&self) -> Result<Text<'static>, Error>;
     /// Convert the type to a Text while trying to copy as less as possible
     #[cfg(feature = "zero-copy")]

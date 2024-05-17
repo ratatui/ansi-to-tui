@@ -42,15 +42,15 @@
           # ];
         };
         craneLib = crane.lib.${system}.overrideToolchain stableToolchain;
-        craneLibLLvmTools = craneLib.overrideToolchain pkgs.rust-bin.stable.latest.default.override {
+        craneLibLLvmTools = craneLib.overrideToolchain (pkgs.rust-bin.stable.latest.default.override {
           extensions = [
             "cargo"
             "llvm-tools"
             "rustc"
           ];
-        };
+        });
 
-        src = craneLib.cleanCargoSource (craneLib.path ./.);
+        src = craneLib.path ./.;
         commonArgs = {
           inherit src;
           buildInputs = with pkgs;
@@ -86,7 +86,8 @@
                 partitionType = "count";
               });
           }
-          // lib.optionalAttrs (!pkgs.stdenv.isDarwin) {
+          // lib.optionalAttrs (!pkgs.stdenv.isDarwin) rec {
+            # default = ansi-to-tui-llvm-coverage;
             ansi-to-tui-llvm-coverage = craneLibLLvmTools.cargoLlvmCov (commonArgs
               // {
                 inherit cargoArtifacts;
