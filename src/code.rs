@@ -34,6 +34,7 @@ pub enum AnsiCode {
     /// Choose alternate font
     AlternateFont,
     /// Choose alternate fonts 1-9
+    #[allow(dead_code)]
     AlternateFonts(u8), // = 11..19, // from 11 to 19
     /// Fraktur ? No clue
     Fraktur,
@@ -115,7 +116,7 @@ impl From<u8> for AnsiCode {
             46 => AnsiCode::BackgroundColor(Color::Cyan),
             47 => AnsiCode::BackgroundColor(Color::Gray),
             48 => AnsiCode::SetBackgroundColor,
-            49 => AnsiCode::DefaultBackgroundColor,            
+            49 => AnsiCode::DefaultBackgroundColor,
             90 => AnsiCode::ForegroundColor(Color::DarkGray),
             91 => AnsiCode::ForegroundColor(Color::LightRed),
             92 => AnsiCode::ForegroundColor(Color::LightGreen),
