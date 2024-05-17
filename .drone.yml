@@ -4,12 +4,11 @@ type: docker
 name: default
 
 steps:
-  - name: Build & Test
-    image: rust:latest
+  - name: Checks
+    image: nixos/nix:master
     commands:
-      - cargo build
-      - cargo test
-  - name: Bench
-    image: rust:latest
-    commands:
-      - cargo bench
+      - nix flake check
+      - nix build .#checks.x86_64-linux.ansi-to-tui-llvm-coverage
+  - name: upload-codecov
+    image: robertstettner/drone-codecov
+    files: result

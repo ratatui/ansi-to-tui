@@ -86,8 +86,7 @@
                 partitionType = "count";
               });
           }
-          // lib.optionalAttrs (!pkgs.stdenv.isDarwin) rec {
-            # default = ansi-to-tui-llvm-coverage;
+          // lib.optionalAttrs (!pkgs.stdenv.isDarwin) {
             ansi-to-tui-llvm-coverage = craneLibLLvmTools.cargoLlvmCov (commonArgs
               // {
                 inherit cargoArtifacts;
