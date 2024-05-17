@@ -7,28 +7,6 @@ use tui::{
     text::{Line, Span, Text},
 };
 
-// #[test]
-// fn test_anyhow() -> anyhow::Result<()> {
-//     let text = ansi_to_text("foo".bytes())?;
-//     println!("{:#?}", text);
-//     Ok(())
-// }
-
-// #[test]
-// #[ignore]
-// fn test_bytes() {
-//     let bytes: Vec<u8> = vec![27_u8, 91, 51, 49, 109, 65, 65, 65];
-//     println!("{:#?}", ansi_to_text(bytes))
-// }
-
-// #[test]
-// fn test_generic() {
-//     let string = "\x1b[33mYellow\x1b[31mRed\x1b[32mGreen\x1b[0m";
-//     println!("{:?}\n\n", string);
-//     // ansi_to_text(string.bytes()).unwrap();
-//     println!("{:#?}", ansi_to_text(string.bytes()));
-// }
-
 #[test]
 fn test_empty_op() {
     use ansi_to_tui::IntoText;
@@ -47,7 +25,7 @@ fn test_empty_op() {
 fn test_string() {
     use ansi_to_tui::IntoText;
     let string: Vec<u8> = "FOO".to_string().bytes().collect();
-    println!("{:?}", string.into_text().unwrap());
+    assert_eq!(string.into_text().unwrap(), Text::raw("FOO"));
 }
 
 #[test]
@@ -92,43 +70,6 @@ fn test_ascii_newlines() {
     // println!("{:#?}", bytes.into_text());
     assert_eq!(bytes.into_text(), output);
 }
-
-// #[test]
-// #[ignore = "Gives a lot of output"]
-// fn test_arch_ascii() {
-//     use crate::ansi_to_text;
-//     use std::{fs::File, io::Read};
-//     let mut ascii = File::open("ascii/arch.ascii").unwrap();
-//     let mut buffer: Vec<u8> = Vec::new();
-//     ascii.read_to_end(&mut buffer).unwrap();
-//     let text = ansi_to_text(buffer).unwrap();
-//     println!("{:#?}", text);
-// }
-
-// #[test]
-// #[ignore = "Gives a lot of output"]
-// fn test_archlinux_ascii() {
-//     use crate::ansi_to_text;
-//     use std::{fs::File, io::Read};
-//     let mut ascii = File::open("ascii/archlinux.ascii").unwrap();
-//     let mut buffer: Vec<u8> = Vec::new();
-//     ascii.read_to_end(&mut buffer).unwrap();
-//     let text = ansi_to_text(buffer).unwrap();
-//     println!("{:#?}", text);
-// }
-
-// #[test]
-// #[ignore]
-// fn test_command() {
-//     use std::process::Command;
-
-//     let c = Command::new("ls")
-//         .args(&["--color=always", "/"])
-//         .output()
-//         .unwrap();
-//     let text = ansi_to_text(c.stdout);
-//     println!("{:?}", text);
-// }
 
 #[test]
 fn test_reset() {
@@ -263,46 +204,8 @@ mod zero_copy {
             Line::from("LINE_8"),
         ]));
 
-        // println!("{:#?}", bytes.to_text());
         assert_eq!(bytes.to_text(), output);
     }
-
-    // #[test]
-    // #[ignore = "Gives a lot of output"]
-    // fn test_arch_ascii() {
-    //     use crate::ansi_to_text;
-    //     use std::{fs::File, io::Read};
-    //     let mut ascii = File::open("ascii/arch.ascii").unwrap();
-    //     let mut buffer: Vec<u8> = Vec::new();
-    //     ascii.read_to_end(&mut buffer).unwrap();
-    //     let text = ansi_to_text(buffer).unwrap();
-    //     println!("{:#?}", text);
-    // }
-
-    // #[test]
-    // #[ignore = "Gives a lot of output"]
-    // fn test_archlinux_ascii() {
-    //     use crate::ansi_to_text;
-    //     use std::{fs::File, io::Read};
-    //     let mut ascii = File::open("ascii/archlinux.ascii").unwrap();
-    //     let mut buffer: Vec<u8> = Vec::new();
-    //     ascii.read_to_end(&mut buffer).unwrap();
-    //     let text = ansi_to_text(buffer).unwrap();
-    //     println!("{:#?}", text);
-    // }
-
-    // #[test]
-    // #[ignore]
-    // fn test_command() {
-    //     use std::process::Command;
-
-    //     let c = Command::new("ls")
-    //         .args(&["--color=always", "/"])
-    //         .output()
-    //         .unwrap();
-    //     let text = ansi_to_text(c.stdout);
-    //     println!("{:?}", text);
-    // }
 
     #[test]
     fn test_reset() {
