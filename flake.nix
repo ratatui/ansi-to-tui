@@ -94,15 +94,16 @@
           };
 
         devShells.default =
-          (craneLib.overrideToolchain stableToolchainWithRustAnalyzer).devShell commonArgs
-          // {
-            buildInputs = [];
-            nativeBuildInputs = [];
-            packages = with pkgs; [
-              cargo-nextest
-              cargo-criterion
-            ];
-          };
+          (craneLib.overrideToolchain stableToolchainWithRustAnalyzer).devShell
+          ({
+              buildInputs = [];
+              nativeBuildInputs = [];
+              packages = with pkgs; [
+                cargo-nextest
+                cargo-criterion
+              ];
+            }
+            // commonArgs);
       }
     );
 }
