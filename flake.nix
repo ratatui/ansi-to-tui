@@ -15,7 +15,6 @@
   };
 
   outputs = {
-    self,
     crane,
     flake-utils,
     nixpkgs,
@@ -41,7 +40,7 @@
           #   "aarch64-apple-darwin"
           # ];
         };
-        craneLib = crane.lib.${system}.overrideToolchain stableToolchain;
+        craneLib = (crane.mkLib pkgs).overrideToolchain stableToolchain;
         craneLibLLvmTools = craneLib.overrideToolchain (pkgs.rust-bin.stable.latest.default.override {
           extensions = [
             "cargo"
