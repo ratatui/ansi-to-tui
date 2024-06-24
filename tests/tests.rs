@@ -149,6 +149,48 @@ fn test_color_and_style_reset() {
     test_both(bytes, output);
 }
 
+#[test]
+fn test_foreground() {
+    for i in 0..256 {
+        let bytes = format!("\x1b[38;5;{}mHELLO", i).as_bytes().to_vec();
+        let output = Text::from(Span::styled(
+            "HELLO",
+            Style::default().fg(Color::Indexed(i as u8)),
+        ));
+        test_both(bytes, output);
+    }
+}
+
+#[test]
+fn test_background() {
+    for i in 0..256 {
+        let bytes = format!("\x1b[48;5;{}mHELLO", i).as_bytes().to_vec();
+        let output = Text::from(Span::styled(
+            "HELLO",
+            Style::default().bg(Color::Indexed(i as u8)),
+        ));
+        test_both(bytes, output);
+    }
+}
+
+#[test]
+fn test_rgb() {
+    for i in 1..=255 {
+        for j in 1..=255 {
+            let bytes = format!("\x1b[38;2;{i};{i};{i};48;2;{j};{j};{j}mHELLO")
+                .as_bytes()
+                .to_vec();
+            let output = Text::from(Span::styled(
+                "HELLO",
+                Style::default()
+                    .fg(Color::Rgb(i, i, i))
+                    .bg(Color::Rgb(j, j, j)),
+            ));
+            test_both(bytes, output);
+        }
+    }
+}
+
 #[cfg(test)]
 #[track_caller]
 pub fn test_both(bytes: impl AsRef<[u8]>, other: Text) {

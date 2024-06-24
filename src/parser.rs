@@ -71,7 +71,6 @@ impl From<AnsiStates> for tui::style::Style {
                 }
                 AnsiCode::ForegroundColor(color) => style = style.fg(color),
                 AnsiCode::BackgroundColor(color) => style = style.bg(color),
-                AnsiCode::AlternateFonts(_) => (),
                 _ => (),
             }
         }
@@ -161,7 +160,7 @@ fn line_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'_>, Style)
 fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], Span<'static>> {
         let mut last = last;
-        let (s, style) = opt(style(last))(s)?;
+        let (s, style) = opt(style_fast(last))(s)?;
 
         #[cfg(feature = "simd")]
         let (s, text) = map_res(take_while(|c| c != b'\x1b' | b'\n'), |t| {
@@ -205,33 +204,24 @@ fn span_fast(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::err
     }
 }
 
-fn style(
-    style: Style,
-) -> impl Fn(&[u8]) -> IResult<&[u8], Option<Style>, nom::error::Error<&[u8]>> {
-    move |s: &[u8]| -> IResult<&[u8], Option<Style>> {
-        let (s, r) = match opt(ansi_sgr_code)(s)? {
-            (s, Some(r)) => (s, Some(r)),
-            (s, None) => {
-                // This is not a valid style code so we need to consume it
-                // Since we already use opt(style) we can safely return an error here which will
-                // skip that style
-                let (s, _garbage) = any_escape_sequence(s)?;
-                (s, None)
-            }
-        };
-        Ok((
-            s,
-            r.map(|r| {
-                Style::from(AnsiStates {
-                    style,
-                    items: r.into(),
-                })
-            }),
-        ))
-    }
-}
+// fn style(
+//     style: Style,
+// ) -> impl Fn(&[u8]) -> IResult<&[u8], Option<Style>, nom::error::Error<&[u8]>> {
+//     move |s: &[u8]| -> IResult<&[u8], Option<Style>> {
+//         let (s, r) = match opt(ansi_sgr_code_fast)(s)? {
+//             (s, Some(r)) => (s, Some(r)),
+//             (s, None) => {
+//                 // This is not a valid style code so we need to consume it
+//                 // Since we already use opt(style) we can safely return an error here which will
+//                 // skip that style
+//                 let (s, _garbage) = any_escape_sequence(s)?;
+//                 (s, None)
+//             }
+//         };
+//         Ok((s, r.map(|r| Style::from(AnsiStates { style, items: r }))))
+//     }
+// }
 
-#[cfg(feature = "zero-copy")]
 fn style_fast(
     style: Style,
 ) -> impl Fn(&[u8]) -> IResult<&[u8], Option<Style>, nom::error::Error<&[u8]>> {
@@ -248,15 +238,6 @@ fn style_fast(
 }
 
 /// A complete ANSI SGR code
-fn ansi_sgr_code(s: &[u8]) -> IResult<&[u8], Vec<AnsiItem>, nom::error::Error<&[u8]>> {
-    delimited(
-        tag("\x1b["),
-        separated_list0(tag(";"), ansi_sgr_item),
-        char('m'),
-    )(s)
-}
-
-#[cfg(feature = "zero-copy")]
 fn ansi_sgr_code_fast(
     s: &[u8],
 ) -> IResult<&[u8], smallvec::SmallVec<[AnsiItem; 2]>, nom::error::Error<&[u8]>> {
@@ -266,6 +247,18 @@ fn ansi_sgr_code_fast(
             items.push(item);
             items
         }),
+        char('m'),
+    )(s)
+}
+
+#[cfg(disabled)]
+#[deprecated]
+/// Old implementation of ansi_sgr_code
+/// This is kept for reference
+fn ansi_sgr_code(s: &[u8]) -> IResult<&[u8], Vec<AnsiItem>, nom::error::Error<&[u8]>> {
+    delimited(
+        tag("\x1b["),
+        separated_list0(tag(";"), ansi_sgr_item),
         char('m'),
     )(s)
 }
@@ -349,7 +342,7 @@ fn color_test() {
 #[test]
 fn ansi_items_test() {
     let sc = Default::default();
-    let t = style(sc)(b"\x1b[38;2;3;3;3m").unwrap().1.unwrap();
+    let t = style_fast(sc)(b"\x1b[38;2;3;3;3m").unwrap().1.unwrap();
     assert_eq!(
         t,
         Style::from(AnsiStates {
