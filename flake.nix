@@ -31,7 +31,7 @@
 
         stableToolchain = pkgs.rust-bin.stable.latest.default;
         stableToolchainWithRustAnalyzer = pkgs.rust-bin.stable.latest.default.override {
-          extensions = ["rust-src" "rust-analyzer"];
+          extensions = ["rust-src" "rust-analyzer" "llvm-tools"];
           # Extra targets if required
           # targets = [
           #   "x86_64-unknown-linux-gnu"
@@ -100,6 +100,7 @@
               cargo-nextest
               cargo-criterion
               cargo-outdated
+              cargo-llvm-cov
             ];
           });
       }

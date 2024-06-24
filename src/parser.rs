@@ -342,6 +342,8 @@ fn color_test() {
     assert_eq!(c.1, Color::Rgb(255, 255, 255));
     let c = color(b"5;255").unwrap();
     assert_eq!(c.1, Color::Indexed(255));
+    let err = color(b"10;255");
+    assert_ne!(err, Ok(c));
 }
 
 #[test]
