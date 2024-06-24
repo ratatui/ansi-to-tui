@@ -81,7 +81,7 @@ impl From<AnsiStates> for tui::style::Style {
 
 pub(crate) fn text(mut s: &[u8]) -> IResult<&[u8], Text<'static>> {
     let mut lines = Vec::new();
-    let mut last = Default::default();
+    let mut last = Style::new();
     while let Ok((_s, (line, style))) = line(last)(s) {
         lines.push(line);
         last = style;
@@ -96,7 +96,7 @@ pub(crate) fn text(mut s: &[u8]) -> IResult<&[u8], Text<'static>> {
 #[cfg(feature = "zero-copy")]
 pub(crate) fn text_fast(mut s: &[u8]) -> IResult<&[u8], Text<'_>> {
     let mut lines = Vec::new();
-    let mut last = Default::default();
+    let mut last = Style::new();
     while let Ok((_s, (line, style))) = line_fast(last)(s) {
         lines.push(line);
         last = style;
@@ -119,7 +119,7 @@ fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)
             // Since reset now tracks seperately we can skip the reset check
             last = last.patch(span.style);
 
-            if spans.is_empty() || !span.content.is_empty() {
+            if !span.content.is_empty() {
                 spans.push(span);
             }
             text = s;
@@ -144,7 +144,7 @@ fn line_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'_>, Style)
             last = last.patch(span.style);
             // If the spans is empty then it might be possible that the style changes
             // but there is no text change
-            if spans.is_empty() || !span.content.is_empty() {
+            if !span.content.is_empty() {
                 spans.push(span);
             }
             text = s;

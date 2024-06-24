@@ -91,17 +91,18 @@ fn test_screen_modes() {
 #[test]
 fn test_cursor_shape_and_color() {
     // malformed -> malformed -> empty
-    let bytes: Vec<u8> = b"\x1b[4 q\x1b]12;#fab1ed\x07".to_vec();
+    let bytes = b"\x1b[4 q\x1b]12;#fab1ed\x07";
     let output = Text::raw("");
     test_both(bytes, output);
 }
 
 #[test]
 fn test_malformed_simple() {
-    let bytes: Vec<u8> = b"\x1b[".to_vec();
+    let bytes = b"\x1b[";
     let output = Text::raw("");
     test_both(bytes, output);
 }
+
 
 #[test]
 fn test_malformed_complex() {
@@ -116,7 +117,7 @@ fn empty_span() {
     let bytes: Vec<u8> = b"\x1b[33m\x1b[31m\x1b[32mHello\x1b[0mWorld".to_vec();
     let output = Text::from(Line::from(vec![
         // Not sure whether to keep this empty span or remove it somehow
-        Span::styled("", Style::default().fg(Color::Yellow)),
+        // Span::styled("", Style::default().fg(Color::Yellow)),
         // Span::styled("", Style::default().fg(Color::Red)),
         Span::styled("Hello", Style::default().fg(Color::Green)),
         Span::styled("World", Style::reset()),
@@ -155,7 +156,7 @@ pub fn test_both(bytes: impl AsRef<[u8]>, other: Text) {
     let bytes = bytes.as_ref();
     let zero_copy = bytes.to_text().unwrap();
     let owned = bytes.into_text().unwrap();
-    assert_eq!(zero_copy, owned);
-    assert_eq!(owned, other);
+    assert_eq!(zero_copy, owned, "zero-copy and owned version of the methods have diverged this is for sure a bug in the library");
+    assert_eq!(owned, other, "owned and other have diverged this migh be due to a bug in the library or maybe an update to the ratatui crate");
     assert_eq!(zero_copy, other);
 }
