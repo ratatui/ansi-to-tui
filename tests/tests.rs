@@ -103,7 +103,6 @@ fn test_malformed_simple() {
     test_both(bytes, output);
 }
 
-
 #[test]
 fn test_malformed_complex() {
     let bytes: Vec<u8> = b"\x1b\x1b[0\x1b[m\x1b".to_vec();
