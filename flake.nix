@@ -96,12 +96,16 @@
           // {
             buildInputs = [];
             nativeBuildInputs = [];
-            packages = with pkgs; [
-              cargo-nextest
-              cargo-criterion
-              cargo-outdated
-              cargo-llvm-cov
-            ];
+            packages = with pkgs;
+              [
+                cargo-nextest
+                cargo-criterion
+                cargo-outdated
+                cargo-mutants
+              ]
+              ++ lib.optionals pkgs.stdenv.isLinux [
+                cargo-llvm-cov
+              ];
           });
       }
     );

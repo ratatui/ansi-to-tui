@@ -163,12 +163,12 @@ fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::err
         let (s, style) = opt(style(last))(s)?;
 
         #[cfg(feature = "simd")]
-        let (s, text) = map_res(take_while(|c| c != b'\x1b' | b'\n'), |t| {
+        let (s, text) = map_res(take_while(|c| c != b'\x1b' && c != b'\n'), |t| {
             simdutf8::basic::from_utf8(t)
         })(s)?;
 
         #[cfg(not(feature = "simd"))]
-        let (s, text) = map_res(take_while(|c| c != b'\x1b' | b'\n'), |t| {
+        let (s, text) = map_res(take_while(|c| c != b'\x1b' && c != b'\n'), |t| {
             std::str::from_utf8(t)
         })(s)?;
 
@@ -187,12 +187,12 @@ fn span_fast(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::err
         let (s, style) = opt(style(last))(s)?;
 
         #[cfg(feature = "simd")]
-        let (s, text) = map_res(take_while(|c| c != b'\x1b' | b'\n'), |t| {
+        let (s, text) = map_res(take_while(|c| c != b'\x1b' && c != b'\n'), |t| {
             simdutf8::basic::from_utf8(t)
         })(s)?;
 
         #[cfg(not(feature = "simd"))]
-        let (s, text) = map_res(take_while(|c| c != b'\x1b' | b'\n'), |t| {
+        let (s, text) = map_res(take_while(|c| c != b'\x1b' && c != b'\n'), |t| {
             std::str::from_utf8(t)
         })(s)?;
 
@@ -200,7 +200,7 @@ fn span_fast(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::err
             last = last.patch(style);
         }
 
-        Ok((s, Span::styled(text.to_owned(), last)))
+        Ok((s, Span::styled(text, last)))
     }
 }
 
