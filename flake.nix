@@ -92,6 +92,7 @@
               });
           };
 
+<<<<<<< bump-version-req
         devShells.default = (craneLib.overrideToolchain stableToolchainWithRustAnalyzer).devShell (commonArgs
           // {
             buildInputs = [];
@@ -102,6 +103,19 @@
               cargo-outdated
             ];
           });
+=======
+        devShells.default =
+          (craneLib.overrideToolchain stableToolchainWithRustAnalyzer).devShell
+          ({
+              buildInputs = [];
+              nativeBuildInputs = [];
+              packages = with pkgs; [
+                cargo-nextest
+                cargo-criterion
+              ];
+            }
+            // commonArgs);
+>>>>>>> master
       }
     );
 }
