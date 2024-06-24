@@ -150,6 +150,7 @@ fn test_color_and_style_reset() {
 }
 
 #[cfg(test)]
+#[track_caller]
 pub fn test_both(bytes: impl AsRef<[u8]>, other: Text) {
     let bytes = bytes.as_ref();
     let zero_copy = bytes.to_text().unwrap();
