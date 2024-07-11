@@ -15,7 +15,6 @@
   };
 
   outputs = {
-    self,
     crane,
     flake-utils,
     nixpkgs,
@@ -32,7 +31,7 @@
 
         stableToolchain = pkgs.rust-bin.stable.latest.default;
         stableToolchainWithRustAnalyzer = pkgs.rust-bin.stable.latest.default.override {
-          extensions = ["rust-src" "rust-analyzer"];
+          extensions = ["rust-src" "rust-analyzer" "llvm-tools"];
           # Extra targets if required
           # targets = [
           #   "x86_64-unknown-linux-gnu"
@@ -41,7 +40,7 @@
           #   "aarch64-apple-darwin"
           # ];
         };
-        craneLib = crane.lib.${system}.overrideToolchain stableToolchain;
+        craneLib = (crane.mkLib pkgs).overrideToolchain stableToolchain;
         craneLibLLvmTools = craneLib.overrideToolchain (pkgs.rust-bin.stable.latest.default.override {
           extensions = [
             "cargo"
@@ -93,17 +92,21 @@
               });
           };
 
-        devShells.default =
-          (craneLib.overrideToolchain stableToolchainWithRustAnalyzer).devShell
-          ({
-              buildInputs = [];
-              nativeBuildInputs = [];
-              packages = with pkgs; [
+        devShells.default = (craneLib.overrideToolchain stableToolchainWithRustAnalyzer).devShell (commonArgs
+          // {
+            buildInputs = [];
+            nativeBuildInputs = [];
+            packages = with pkgs;
+              [
                 cargo-nextest
                 cargo-criterion
+                cargo-outdated
+                cargo-mutants
+              ]
+              ++ lib.optionals pkgs.stdenv.isLinux [
+                cargo-llvm-cov
               ];
-            }
-            // commonArgs);
+          });
       }
     );
 }
