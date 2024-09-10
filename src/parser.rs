@@ -53,7 +53,7 @@ impl From<AnsiStates> for tui::style::Style {
                 AnsiCode::Normal => {
                     style = style
                         .remove_modifier(Modifier::BOLD)
-                        .remove_modifier(Modifier::DIM)
+                        .remove_modifier(Modifier::DIM);
                 }
                 AnsiCode::Italic => style = style.add_modifier(Modifier::ITALIC),
                 AnsiCode::Underline => style = style.add_modifier(Modifier::UNDERLINED),
