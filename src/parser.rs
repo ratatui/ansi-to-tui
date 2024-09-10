@@ -13,7 +13,7 @@ use nom::{
 };
 use std::str::FromStr;
 use tui::{
-    style::{Color, Modifier, Style},
+    style::{Color, Modifier, Style, Stylize},
     text::{Line, Span, Text},
 };
 
@@ -50,6 +50,11 @@ impl From<AnsiStates> for tui::style::Style {
                 AnsiCode::Reset => style = Style::reset(),
                 AnsiCode::Bold => style = style.add_modifier(Modifier::BOLD),
                 AnsiCode::Faint => style = style.add_modifier(Modifier::DIM),
+                AnsiCode::Normal => {
+                    style = style
+                        .remove_modifier(Modifier::BOLD)
+                        .remove_modifier(Modifier::DIM)
+                }
                 AnsiCode::Italic => style = style.add_modifier(Modifier::ITALIC),
                 AnsiCode::Underline => style = style.add_modifier(Modifier::UNDERLINED),
                 AnsiCode::SlowBlink => style = style.add_modifier(Modifier::SLOW_BLINK),
