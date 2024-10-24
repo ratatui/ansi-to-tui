@@ -2,71 +2,79 @@
   description = "A simple rust flake using rust-overlay and craneLib";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    crane = {
-      url = "github:ipetkov/crane";
+    crane.url = "github:ipetkov/crane";
+    nix-github-actions = {
+      url = "github:nix-community/nix-github-actions";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    advisory-db = {
+      url = "github:rustsec/advisory-db";
+      flake = false;
+    };
   };
 
   outputs = {
+    self,
     crane,
     flake-utils,
     nixpkgs,
     rust-overlay,
+    advisory-db,
+    nix-github-actions,
     ...
   }:
     flake-utils.lib.eachDefaultSystem (
       system: let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [rust-overlay.overlays.default];
+          overlays = [
+            rust-overlay.overlays.default
+          ];
         };
         inherit (pkgs) lib;
 
         stableToolchain = pkgs.rust-bin.stable.latest.default;
+        stableToolchainWithLLvmTools = pkgs.rust-bin.stable.latest.default.override {
+          extensions = ["rust-src" "llvm-tools"];
+        };
         stableToolchainWithRustAnalyzer = pkgs.rust-bin.stable.latest.default.override {
-          extensions = ["rust-src" "rust-analyzer" "llvm-tools"];
-          # Extra targets if required
-          # targets = [
-          #   "x86_64-unknown-linux-gnu"
-          #   "x86_64-unknown-linux-musl"
-          #   "x86_64-apple-darwin"
-          #   "aarch64-apple-darwin"
-          # ];
+          extensions = ["rust-src" "rust-analyzer"];
         };
         craneLib = (crane.mkLib pkgs).overrideToolchain stableToolchain;
-        craneLibLLvmTools = craneLib.overrideToolchain (pkgs.rust-bin.stable.latest.default.override {
-          extensions = [
-            "cargo"
-            "llvm-tools"
-            "rustc"
-          ];
-        });
+        craneLibLLvmTools = (crane.mkLib pkgs).overrideToolchain stableToolchainWithLLvmTools;
 
-        src = craneLib.path ./.;
-        commonArgs = {
-          inherit src;
-          buildInputs = with pkgs;
-            []
-            ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
-              libiconv
-              # pkgs.darwin.apple_sdk.frameworks.Security
-              # pkgs.darwin.apple_sdk.frameworks.CoreServices
-              # pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
-            ]; # Inputs required for the TARGET system
-          # nativeBuildInputs = []; # Intputs required for the HOST system
-          # This is often requird for any ffi based packages that use bindgen
-          # LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
-          # For using pkg-config that many libraries require
-          # PKG_CONFIG_PATH = lib.makeSearchPath "lib/pkgconfig" (with pkgs;[ openssl.dev zlib.dev ]);
+        sourceFilters = path: type: (craneLib.filterCargoSources path type) || (lib.hasSuffix ".ascii" path);
+        src = lib.cleanSourceWith {
+          filter = sourceFilters;
+          src = ./.;
         };
-        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+        commonArgs =
+          {
+            inherit src;
+            pname = "ansi-to-tui";
+            doCheck = false;
+            # LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+            # nativeBuildInputs = with pkgs; [
+            #   cmake
+            #   llvmPackages.libclang.lib
+            # ];
+            buildInputs = with pkgs;
+              []
+              ++ (lib.optionals pkgs.stdenv.isDarwin [
+                libiconv
+                # darwin.apple_sdk.frameworks.Metal
+              ]);
+          }
+          // (lib.optionalAttrs pkgs.stdenv.isLinux {
+            # BINDGEN_EXTRA_CLANG_ARGS = "-I${pkgs.llvmPackages.libclang.lib}/lib/clang/18/include";
+          });
+        cargoArtifacts = craneLib.buildPackage commonArgs;
       in {
         checks =
           {
@@ -75,7 +83,18 @@
                 inherit cargoArtifacts;
                 cargoClippyExtraArgs = "--all-targets -- --deny warnings";
               });
-            ansi-to-tui-fmt = craneLib.cargoFmt {
+            ansi-to-tui-docs = craneLib.cargoDoc (commonArgs // {inherit cargoArtifacts;});
+            ansi-to-tui-fmt = craneLib.cargoFmt {inherit src;};
+            ansi-to-tui-toml-fmt = craneLib.taploFmt {
+              src = pkgs.lib.sources.sourceFilesBySuffices src [".toml"];
+            };
+            # Audit dependencies
+            ansi-to-tui-audit = craneLib.cargoAudit {
+              inherit src advisory-db;
+            };
+
+            # Audit licenses
+            ansi-to-tui-deny = craneLib.cargoDeny {
               inherit src;
             };
             ansi-to-tui-nextest = craneLib.cargoNextest (commonArgs
@@ -86,27 +105,30 @@
               });
           }
           // lib.optionalAttrs (!pkgs.stdenv.isDarwin) {
-            ansi-to-tui-llvm-coverage = craneLibLLvmTools.cargoLlvmCov (commonArgs
-              // {
-                inherit cargoArtifacts;
-              });
+            ansi-to-tui-llvm-coverage = craneLibLLvmTools.cargoLlvmCov (commonArgs // {inherit cargoArtifacts;});
           };
 
-        devShells.default = (craneLib.overrideToolchain stableToolchainWithRustAnalyzer).devShell (commonArgs
-          // {
-            buildInputs = [];
-            nativeBuildInputs = [];
-            packages = with pkgs;
-              [
-                cargo-nextest
-                cargo-criterion
-                cargo-outdated
-                cargo-mutants
-              ]
-              ++ lib.optionals pkgs.stdenv.isLinux [
-                cargo-llvm-cov
-              ];
-          });
+        packages = rec {
+          ansi-to-tui = craneLib.buildPackage (commonArgs // {inherit cargoArtifacts;});
+          default = ansi-to-tui;
+        };
+
+        devShells = {
+          default = pkgs.mkShell {
+            packages = with pkgs; [
+              stableToolchainWithRustAnalyzer
+              cargo-nextest
+              cargo-deny
+              cargo-outdated
+              cargo-semver-checks
+            ];
+          };
+        };
       }
-    );
+    )
+    // {
+      githubActions = nix-github-actions.lib.mkGithubMatrix {
+        checks = nixpkgs.lib.getAttrs ["x86_64-linux"] self.checks;
+      };
+    };
 }

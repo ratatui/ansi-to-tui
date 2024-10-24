@@ -1,7 +1,8 @@
-name: Build
+name: build
 
 on:
   push:
+    branches: [ master ]
   pull_request:
     branches: [ master ]
 
@@ -9,19 +10,46 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  checks-matrix:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - id: set-matrix
+        name: Generate Nix Matrix
+        run: |
+          set -Eeu
+          matrix="$(nix eval --json '.#githubActions.matrix')"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  checks-build:
+    needs: checks-matrix
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix: ${{fromJSON(needs.checks-matrix.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix build -L '.#${{ matrix.attr }}'
+
+  codecov:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: "write"
+      contents: "read"
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+    - uses: DeterminateSystems/nix-installer-action@main
+    - uses: DeterminateSystems/magic-nix-cache-action@main
 
-    - name: Install nix
-      uses: cachix/install-nix-action@v27
-      with:
-        github_access_token: ${{ secrets.GITHUB_TOKEN }}
-    - run: nix flake check
-    - run: nix --extra-experimental-features "nix-command flakes" build .#checks.x86_64-linux.ansi-to-tui-llvm-coverage
+    - name: Run codecov
+      run: nix build .#checks.x86_64-linux.ansi-to-tui-llvm-coverage
+
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v4.0.1
       with:
@@ -31,3 +59,4 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./result
         verbose: true
+

@@ -3,7 +3,7 @@ use ansi_to_tui::IntoText;
 use pretty_assertions::assert_eq;
 use tui::style::Stylize;
 use tui::{
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span, Text},
 };
 
@@ -189,6 +189,17 @@ fn test_rgb() {
             test_both(bytes, output);
         }
     }
+}
+
+#[test]
+fn test_reset_sequences() {
+    let bytes = "not, \x1b[1mbold\x1b[22m, not anymore".as_bytes().to_vec();
+    let output = Text::from(Line::from(vec![
+        Span::raw("not, "),
+        Span::raw("bold").bold(),
+        Span::raw(", not anymore").remove_modifier(Modifier::BOLD | Modifier::DIM),
+    ]));
+    test_both(bytes, output);
 }
 
 #[cfg(test)]
