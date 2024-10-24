@@ -120,6 +120,7 @@
               cargo-nextest
               cargo-deny
               cargo-outdated
+              cargo-semver-checks
             ];
           };
         };
