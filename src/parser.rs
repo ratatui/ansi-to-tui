@@ -51,17 +51,22 @@ impl From<AnsiStates> for tui::style::Style {
                 AnsiCode::Bold => style = style.add_modifier(Modifier::BOLD),
                 AnsiCode::Faint => style = style.add_modifier(Modifier::DIM),
                 AnsiCode::Normal => {
-                    style = style
-                        .remove_modifier(Modifier::BOLD)
-                        .remove_modifier(Modifier::DIM);
+                    style = style.remove_modifier(Modifier::BOLD | Modifier::DIM);
                 }
                 AnsiCode::Italic => style = style.add_modifier(Modifier::ITALIC),
+                AnsiCode::NotItalic => style = style.remove_modifier(Modifier::ITALIC),
                 AnsiCode::Underline => style = style.add_modifier(Modifier::UNDERLINED),
+                AnsiCode::UnderlineOff => style = style.remove_modifier(Modifier::UNDERLINED),
                 AnsiCode::SlowBlink => style = style.add_modifier(Modifier::SLOW_BLINK),
                 AnsiCode::RapidBlink => style = style.add_modifier(Modifier::RAPID_BLINK),
+                AnsiCode::BlinkOff => {
+                    style = style.remove_modifier(Modifier::SLOW_BLINK | Modifier::RAPID_BLINK)
+                }
                 AnsiCode::Reverse => style = style.add_modifier(Modifier::REVERSED),
                 AnsiCode::Conceal => style = style.add_modifier(Modifier::HIDDEN),
+                AnsiCode::Reveal => style = style.remove_modifier(Modifier::HIDDEN),
                 AnsiCode::CrossedOut => style = style.add_modifier(Modifier::CROSSED_OUT),
+                AnsiCode::CrossedOutOff => style = style.remove_modifier(Modifier::CROSSED_OUT),
                 AnsiCode::DefaultForegroundColor => style = style.fg(Color::Reset),
                 AnsiCode::DefaultBackgroundColor => style = style.bg(Color::Reset),
                 AnsiCode::SetForegroundColor => {

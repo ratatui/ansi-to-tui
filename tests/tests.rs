@@ -192,11 +192,74 @@ fn test_rgb() {
 }
 
 #[test]
-fn test_reset_sequences() {
+fn test_bold_reset_sequences() {
     let bytes = "not, \x1b[1mbold\x1b[22m, not anymore".as_bytes().to_vec();
     let output = Text::from(Line::from(vec![
         Span::raw("not, "),
         Span::raw("bold").bold(),
+        Span::raw(", not anymore").remove_modifier(Modifier::BOLD | Modifier::DIM),
+    ]));
+    test_both(bytes, output);
+}
+
+#[test]
+fn test_underline_reset_sequences() {
+    let bytes = "not, \x1b[4munderlined\x1b[24m, not anymore"
+        .as_bytes()
+        .to_vec();
+    let output = Text::from(Line::from(vec![
+        Span::raw("not, "),
+        Span::raw("underlined").underlined(),
+        Span::raw(", not anymore").remove_modifier(Modifier::UNDERLINED),
+    ]));
+    test_both(bytes, output);
+}
+
+#[test]
+fn test_conceal_reset_sequences() {
+    let bytes = "not, \x1b[8mconcealed\x1b[28m, not anymore"
+        .as_bytes()
+        .to_vec();
+    let output = Text::from(Line::from(vec![
+        Span::raw("not, "),
+        Span::raw("concealed").hidden(),
+        Span::raw(", not anymore").remove_modifier(Modifier::HIDDEN),
+    ]));
+    test_both(bytes, output);
+}
+
+#[test]
+fn test_italic_reset_sequences() {
+    let bytes = "not, \x1b[3mitalic\x1b[23m, not anymore"
+        .as_bytes()
+        .to_vec();
+    let output = Text::from(Line::from(vec![
+        Span::raw("not, "),
+        Span::raw("italic").italic(),
+        Span::raw(", not anymore").remove_modifier(Modifier::ITALIC),
+    ]));
+    test_both(bytes, output);
+}
+
+#[test]
+fn test_blink_reset_sequences() {
+    let bytes = "not, \x1b[5mblinking\x1b[25m, not anymore"
+        .as_bytes()
+        .to_vec();
+    let output = Text::from(Line::from(vec![
+        Span::raw("not, "),
+        Span::raw("blinking").slow_blink(),
+        Span::raw(", not anymore").remove_modifier(Modifier::SLOW_BLINK | Modifier::RAPID_BLINK),
+    ]));
+    test_both(bytes, output);
+}
+
+#[test]
+fn test_faint_reset_sequences() {
+    let bytes = "not, \x1b[2mfaint\x1b[22m, not anymore".as_bytes().to_vec();
+    let output = Text::from(Line::from(vec![
+        Span::raw("not, "),
+        Span::raw("faint").dim(),
         Span::raw(", not anymore").remove_modifier(Modifier::BOLD | Modifier::DIM),
     ]));
     test_both(bytes, output);
