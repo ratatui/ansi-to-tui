@@ -45,7 +45,7 @@ mod code;
 mod error;
 mod parser;
 pub use error::Error;
-use tui::text::Text;
+use ratatui_core::text::Text;
 
 /// IntoText will convert any type that has a AsRef<[u8]> to a Text.
 pub trait IntoText {
