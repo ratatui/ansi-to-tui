@@ -18,9 +18,9 @@ I recommend switching over to ratatui since tui-rs is currently unmaintained.
 ## Example
 
 ```rust
-use ansi_to_tui::IntoText;
-let buffer = std::fs::read("ascii/text.ascii").unwrap();
-let output = buffer.into_text();
+use ansi_to_tui::IntoText as _;
+let buffer = std::fs::read("ascii/text.ascii")?;
+let output = buffer.into_text()?;
 ```
 
 [Text]: https://docs.rs/ratatui/latest/ratatui/text/struct.Text.html
