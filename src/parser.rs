@@ -298,78 +298,166 @@ fn color_type(s: &[u8]) -> IResult<&[u8], ColorType> {
     }
 }
 
-#[test]
-fn color_test() {
-    let c = color(b"2;255;255;255").unwrap();
-    assert_eq!(c.1, Color::Rgb(255, 255, 255));
-    let c = color(b"5;255").unwrap();
-    assert_eq!(c.1, Color::Indexed(255));
-    let err = color(b"10;255");
-    assert_ne!(err, Ok(c));
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::code::AnsiCode;
+    use tui::style::Color;
 
-#[test]
-fn ansi_items_test() {
-    let sc = Default::default();
-    let t = style(sc)(b"\x1b[38;2;3;3;3m").unwrap().1.unwrap();
-    assert_eq!(
-        t,
-        Style::from(AnsiStates {
-            style: sc,
-            items: vec![AnsiItem {
-                code: AnsiCode::SetForegroundColor,
-                color: Some(Color::Rgb(3, 3, 3))
-            }]
-            .into()
-        })
-    );
-    assert_eq!(
-        style(sc)(b"\x1b[38;5;3m").unwrap().1.unwrap(),
-        Style::from(AnsiStates {
-            style: sc,
-            items: vec![AnsiItem {
-                code: AnsiCode::SetForegroundColor,
-                color: Some(Color::Indexed(3))
-            }]
-            .into()
-        })
-    );
-    assert_eq!(
-        style(sc)(b"\x1b[38;5;3;48;5;3m").unwrap().1.unwrap(),
-        Style::from(AnsiStates {
-            style: sc,
-            items: vec![
-                AnsiItem {
+    #[test]
+    fn test_ansi_sgr_code() {
+        let bytes = b"\x1b[38;2;255;255;255m";
+        let output = ansi_sgr_code(bytes).unwrap();
+        assert_eq!(output.1.len(), 1);
+        assert_eq!(output.1[0].code, AnsiCode::SetForegroundColor);
+        assert_eq!(output.1[0].color, Some(Color::Rgb(255, 255, 255)));
+    }
+
+    #[test]
+    fn color_test() {
+        let c = color(b"2;255;255;255").unwrap();
+        assert_eq!(c.1, Color::Rgb(255, 255, 255));
+        let c = color(b"5;255").unwrap();
+        assert_eq!(c.1, Color::Indexed(255));
+        let err = color(b"10;255");
+        assert_ne!(err, Ok(c));
+    }
+
+    #[test]
+    fn ansi_items_test() {
+        let sc = Default::default();
+        let t = style(sc)(b"\x1b[38;2;3;3;3m").unwrap().1.unwrap();
+        assert_eq!(
+            t,
+            Style::from(AnsiStates {
+                style: sc,
+                items: vec![AnsiItem {
+                    code: AnsiCode::SetForegroundColor,
+                    color: Some(Color::Rgb(3, 3, 3))
+                }]
+                .into()
+            })
+        );
+        assert_eq!(
+            style(sc)(b"\x1b[38;5;3m").unwrap().1.unwrap(),
+            Style::from(AnsiStates {
+                style: sc,
+                items: vec![AnsiItem {
                     code: AnsiCode::SetForegroundColor,
                     color: Some(Color::Indexed(3))
-                },
-                AnsiItem {
-                    code: AnsiCode::SetBackgroundColor,
-                    color: Some(Color::Indexed(3))
-                }
-            ]
-            .into()
-        })
-    );
-    assert_eq!(
-        style(sc)(b"\x1b[38;5;3;48;5;3;1m").unwrap().1.unwrap(),
-        Style::from(AnsiStates {
-            style: sc,
-            items: vec![
-                AnsiItem {
-                    code: AnsiCode::SetForegroundColor,
-                    color: Some(Color::Indexed(3))
-                },
-                AnsiItem {
-                    code: AnsiCode::SetBackgroundColor,
-                    color: Some(Color::Indexed(3))
-                },
-                AnsiItem {
-                    code: AnsiCode::Bold,
-                    color: None
-                }
-            ]
-            .into()
-        })
-    );
+                }]
+                .into()
+            })
+        );
+        assert_eq!(
+            style(sc)(b"\x1b[38;5;3;48;5;3m").unwrap().1.unwrap(),
+            Style::from(AnsiStates {
+                style: sc,
+                items: vec![
+                    AnsiItem {
+                        code: AnsiCode::SetForegroundColor,
+                        color: Some(Color::Indexed(3))
+                    },
+                    AnsiItem {
+                        code: AnsiCode::SetBackgroundColor,
+                        color: Some(Color::Indexed(3))
+                    }
+                ]
+                .into()
+            })
+        );
+        assert_eq!(
+            style(sc)(b"\x1b[38;5;3;48;5;3;1m").unwrap().1.unwrap(),
+            Style::from(AnsiStates {
+                style: sc,
+                items: vec![
+                    AnsiItem {
+                        code: AnsiCode::SetForegroundColor,
+                        color: Some(Color::Indexed(3))
+                    },
+                    AnsiItem {
+                        code: AnsiCode::SetBackgroundColor,
+                        color: Some(Color::Indexed(3))
+                    },
+                    AnsiItem {
+                        code: AnsiCode::Bold,
+                        color: None
+                    }
+                ]
+                .into()
+            })
+        );
+    }
+
+    #[test]
+    fn test_lines_no_ansi() {
+        let bytes = b"this is a line of text\nand a second one";
+        let output = line(Style::default())(bytes).unwrap();
+        let output_fast = line_fast(Style::default())(bytes).unwrap();
+        assert_eq!(
+            output.1 .0,
+            Line::from(vec![Span::raw("this is a line of text")])
+        );
+        assert_eq!(
+            output_fast.1 .0,
+            Line::from(vec![Span::raw("this is a line of text")])
+        );
+    }
+
+    #[test]
+    fn test_lines_no_ansi_carriage_return() {
+        let bytes = b"this is a line of text\r\nand a second one";
+        let output = line(Style::default())(bytes).unwrap();
+        let output_fast = line_fast(Style::default())(bytes).unwrap();
+        assert_eq!(
+            output.1 .0,
+            Line::from(vec![Span::raw("this is a line of text")])
+        );
+        assert_eq!(
+            output_fast.1 .0,
+            Line::from(vec![Span::raw("this is a line of text")])
+        );
+    }
+
+    #[test]
+    fn test_lines_ansi() {
+        let bytes = b"this \x1b[31mis a line of text\x1b[0m\nand a second one";
+        let output = line(Style::default())(bytes).unwrap();
+        let output_fast = line_fast(Style::default())(bytes).unwrap();
+        assert_eq!(
+            output.1 .0,
+            Line::from(vec![
+                Span::styled("this ", Style::default()),
+                Span::styled("is a line of text", Style::default().fg(Color::Red)),
+            ])
+        );
+        assert_eq!(
+            output_fast.1 .0,
+            Line::from(vec![
+                Span::styled("this ", Style::default()),
+                Span::styled("is a line of text", Style::default().fg(Color::Red)),
+            ])
+        );
+    }
+
+    #[test]
+    fn test_lines_ansi_carriage_return() {
+        let bytes = b"this \x1b[31mis a line of text\x1b[0m\r\nand a second one";
+        let output = line(Style::default())(bytes).unwrap();
+        let output_fast = line_fast(Style::default())(bytes).unwrap();
+        assert_eq!(
+            output.1 .0,
+            Line::from(vec![
+                Span::styled("this ", Style::default()),
+                Span::styled("is a line of text", Style::default().fg(Color::Red)),
+            ])
+        );
+        assert_eq!(
+            output_fast.1 .0,
+            Line::from(vec![
+                Span::styled("this ", Style::default()),
+                Span::styled("is a line of text", Style::default().fg(Color::Red)),
+            ])
+        );
+    }
 }
