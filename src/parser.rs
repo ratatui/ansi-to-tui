@@ -3,13 +3,10 @@ use nom::{
     branch::alt,
     bytes::complete::*,
     character::complete::*,
-    character::is_alphabetic,
-    combinator::{map_res, opt, recognize, value},
-    error,
-    error::FromExternalError,
+    combinator::{map_res, opt},
     multi::*,
-    sequence::{delimited, preceded, terminated, tuple},
-    IResult, Parser,
+    sequence::{delimited, preceded},
+    AsChar, IResult, Parser,
 };
 use ratatui_core::{
     style::{Color, Modifier, Style, Stylize},
@@ -120,8 +117,8 @@ pub(crate) fn text_fast(mut s: &[u8]) -> IResult<&[u8], Text<'_>> {
 fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)> {
     // let style_: Style = Default::default();
     move |s: &[u8]| -> IResult<&[u8], (Line<'static>, Style)> {
-        let (s, mut text) = take_while(|c| c != b'\n')(s)?;
-        let (s, _) = opt(tag("\n"))(s)?;
+        let (s, mut text) = take_while(|c| c != b'\n').parse(s)?;
+        let (s, _) = opt(tag("\n")).parse(s)?;
         let mut spans = Vec::new();
         let mut last = style;
         while let Ok((s, span)) = span(last)(text) {
@@ -145,8 +142,8 @@ fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)
 fn line_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'_>, Style)> {
     // let style_: Style = Default::default();
     move |s: &[u8]| -> IResult<&[u8], (Line<'_>, Style)> {
-        let (s, mut text) = take_while(|c| c != b'\n')(s)?;
-        let (s, _) = opt(tag("\n"))(s)?;
+        let (s, mut text) = take_while(|c| c != b'\n').parse(s)?;
+        let (s, _) = opt(tag("\n")).parse(s)?;
         let mut spans = Vec::new();
         let mut last = style;
         while let Ok((s, span)) = span_fast(last)(text) {
@@ -170,17 +167,19 @@ fn line_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'_>, Style)
 fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], Span<'static>> {
         let mut last = last;
-        let (s, style) = opt(style(last))(s)?;
+        let (s, style) = opt(style(last)).parse(s)?;
 
         #[cfg(feature = "simd")]
         let (s, text) = map_res(take_while(|c| c != b'\x1b' && c != b'\n'), |t| {
             simdutf8::basic::from_utf8(t)
-        })(s)?;
+        })
+        .parse(s)?;
 
         #[cfg(not(feature = "simd"))]
         let (s, text) = map_res(take_while(|c| c != b'\x1b' && c != b'\n'), |t| {
             std::str::from_utf8(t)
-        })(s)?;
+        })
+        .parse(s)?;
 
         if let Some(style) = style.flatten() {
             last = last.patch(style);
@@ -194,17 +193,19 @@ fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::err
 fn span_fast(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], Span<'_>> {
         let mut last = last;
-        let (s, style) = opt(style(last))(s)?;
+        let (s, style) = opt(style(last)).parse(s)?;
 
         #[cfg(feature = "simd")]
         let (s, text) = map_res(take_while(|c| c != b'\x1b' && c != b'\n'), |t| {
             simdutf8::basic::from_utf8(t)
-        })(s)?;
+        })
+        .parse(s)?;
 
         #[cfg(not(feature = "simd"))]
         let (s, text) = map_res(take_while(|c| c != b'\x1b' && c != b'\n'), |t| {
             std::str::from_utf8(t)
-        })(s)?;
+        })
+        .parse(s)?;
 
         if let Some(style) = style.flatten() {
             last = last.patch(style);
@@ -218,7 +219,7 @@ fn style(
     style: Style,
 ) -> impl Fn(&[u8]) -> IResult<&[u8], Option<Style>, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], Option<Style>> {
-        let (s, r) = match opt(ansi_sgr_code)(s)? {
+        let (s, r) = match opt(ansi_sgr_code).parse(s)? {
             (s, Some(r)) => (s, Some(r)),
             (s, None) => {
                 let (s, _) = any_escape_sequence(s)?;
@@ -240,7 +241,8 @@ fn ansi_sgr_code(
             items
         }),
         char('m'),
-    )(s)
+    )
+    .parse(s)
 }
 
 fn any_escape_sequence(s: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
@@ -256,10 +258,11 @@ fn any_escape_sequence(s: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
     let (input, garbage) = preceded(
         char('\x1b'),
         opt(alt((
-            delimited(char('['), take_till(is_alphabetic), opt(take(1u8))),
+            delimited(char('['), take_till(AsChar::is_alpha), opt(take(1u8))),
             delimited(char(']'), take_till(|c| c == b'\x07'), opt(take(1u8))),
         ))),
-    )(s)?;
+    )
+    .parse(s)?;
     Ok((input, garbage))
 }
 
@@ -269,22 +272,22 @@ fn ansi_sgr_item(s: &[u8]) -> IResult<&[u8], AnsiItem> {
     let code = AnsiCode::from(c);
     let (s, color) = match code {
         AnsiCode::SetForegroundColor | AnsiCode::SetBackgroundColor => {
-            let (s, _) = opt(tag(";"))(s)?;
+            let (s, _) = opt(tag(";")).parse(s)?;
             let (s, color) = color(s)?;
             (s, Some(color))
         }
         _ => (s, None),
     };
-    let (s, _) = opt(tag(";"))(s)?;
+    let (s, _) = opt(tag(";")).parse(s)?;
     Ok((s, AnsiItem { code, color }))
 }
 
 fn color(s: &[u8]) -> IResult<&[u8], Color> {
     let (s, c_type) = color_type(s)?;
-    let (s, _) = opt(tag(";"))(s)?;
+    let (s, _) = opt(tag(";")).parse(s)?;
     match c_type {
         ColorType::TrueColor => {
-            let (s, (r, _, g, _, b)) = tuple((u8, tag(";"), u8, tag(";"), u8))(s)?;
+            let (s, (r, _, g, _, b)) = (u8, tag(";"), u8, tag(";"), u8).parse(s)?;
             Ok((s, Color::Rgb(r, g, b)))
         }
         ColorType::EightBit => {
@@ -297,8 +300,8 @@ fn color(s: &[u8]) -> IResult<&[u8], Color> {
 fn color_type(s: &[u8]) -> IResult<&[u8], ColorType> {
     let (s, t) = i64(s)?;
     // NOTE: This isn't opt because a color type must always be followed by a color
-    // let (s, _) = opt(tag(";"))(s)?;
-    let (s, _) = tag(";")(s)?;
+    // let (s, _) = opt(tag(";")).parse(s)?;
+    let (s, _) = tag(";").parse(s)?;
     match t {
         2 => Ok((s, ColorType::TrueColor)),
         5 => Ok((s, ColorType::EightBit)),
