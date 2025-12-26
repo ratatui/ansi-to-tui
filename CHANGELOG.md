@@ -5,21 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [8.0.0-beta.0](https://github.com/ratatui/ansi-to-tui/compare/v7.0.0...v8.0.0-beta.0) - 2025-11-10
+## [8.0.0](https://github.com/ratatui/ansi-to-tui/compare/v7.0.0...v8.0.0) - 2025-12-26
 
 ### Fixed
 
-- Fix failing tests with disabled default features ([#63](https://github.com/ratatui/ansi-to-tui/pull/63))
+- Fix failing tests with disabled default features
+  ([#63](https://github.com/ratatui/ansi-to-tui/pull/63))
 
 ### Other
 
+- update ratatui-core to 0.1.0 ([#72](https://github.com/ratatui/ansi-to-tui/pull/72))
+- enable trusted publishing ([#69](https://github.com/ratatui/ansi-to-tui/pull/69))
 - set edition to 2024 ([#67](https://github.com/ratatui/ansi-to-tui/pull/67))
 - unrelease 7.0.1 ([#65](https://github.com/ratatui/ansi-to-tui/pull/65))
 - *(parser)* refresh deps and benchmarks ([#64](https://github.com/ratatui/ansi-to-tui/pull/64))
 - update to ratatui-0.30 pre-release ([#60](https://github.com/ratatui/ansi-to-tui/pull/60))
 - release v7.0.1 ([#59](https://github.com/ratatui/ansi-to-tui/pull/59))
-- indicate in README that into_text is fallible ([#62](https://github.com/ratatui/ansi-to-tui/pull/62))
-- Fix reset for underline/blink/italic/hidden ([#57](https://github.com/ratatui/ansi-to-tui/pull/57))
+- indicate in README that into_text is fallible
+  ([#62](https://github.com/ratatui/ansi-to-tui/pull/62))
+- Fix reset for underline/blink/italic/hidden
+  ([#57](https://github.com/ratatui/ansi-to-tui/pull/57))
 
 ## [7.0.0](https://github.com/ratatui/ansi-to-tui/compare/v6.0.1...v7.0.0) - 2024-10-24
 
@@ -334,4 +339,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Change from ansitui to ansi-to-tui ([`43b1562`](https://github.com/sayanarijit/ansi-to-tui/commit/43b15627111b8742749acf73232a18378423c05a))
     - Initial Commit. ([`4cd9c8f`](https://github.com/sayanarijit/ansi-to-tui/commit/4cd9c8fc0b5bf1d6fd1274dcf34561b76d186d32))
 </details>
-
