@@ -3,11 +3,14 @@ name = "ansi-to-tui"
 version = "8.0.0"
 authors = ["Uttarayan Mondal <email@uttarayan.me>"]
 edition = "2024"
-description = "A library to convert ansi color coded text into ratatui::text::Text type from ratatui library"
-keywords = ["ansi", "ascii", "tui", "parser"]
+rust-version = "1.85"
+description = "Convert ANSI color and style codes into Ratatui Text"
+keywords = ["ansi", "ascii", "ratatui", "parser", "style"]
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/uttarayan21/ansi-to-tui"
+repository = "https://github.com/ratatui/ansi-to-tui"
+documentation = "https://docs.rs/ansi-to-tui"
+homepage = "https://ratatui.rs"
 
 [dependencies]
 nom = "8"
