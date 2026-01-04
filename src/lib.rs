@@ -1,30 +1,47 @@
 #![allow(unused_imports)]
 #![warn(missing_docs)]
-//! Parses a `Vec<u8>` as an byte sequence with ansi colors to
-//! [`tui::text::Text`][Text].  
+
+//! Convert ANSI color and style codes into Ratatui [`Text`][Text].
 //!
-//! Invalid ansi colors / sequences will be ignored.  
+//! This crate parses bytes containing ANSI SGR escape sequences (like `\x1b[31m`).
+//! It produces a Ratatui [`Text`][Text] with equivalent foreground/background [`Color`][Color] and
+//! [`Modifier`][Modifier] settings via [`Style`][Style].
 //!
+//! Unknown or malformed escape sequences are ignored, so you can feed it real terminal output
+//! without having to pre-clean it.
 //!
-//! Supported features
-//! - UTF-8 using `String::from_utf8` or [`simdutf8`][simdutf8].
-//! - Most stuff like **Bold** / *Italic* / <u>Underline</u> / ~~Strikethrough~~.
-//! - Supports 4-bit color palletes.
-//! - Supports 8-bit color.
-//! - Supports True color ( RGB / 24-bit color ).
+//! # Features
 //!
+//! - UTF-8 decoding via `String::from_utf8` (default) or [`simdutf8`][simdutf8] (`simd` feature).
+//! - SGR styles such as bold, italic, underline, and strikethrough.
+//! - Colors: named (3/4-bit, 8/16-color), indexed (8-bit, 256-color), and truecolor (24-bit RGB).
+//! - Optional `zero-copy` API that borrows from the input.
 //!
-//! ## Example
-//! The argument to the function `ansi_to_text` implements `IntoIterator` so it will be consumed on
-//! use.
+//! # Supported Color Codes
+//!
+//! | Color Mode                  | Supported | SGR Example              | Ratatui `Color` Example |
+//! | --------------------------- | :-------: | ------------------------ | ----------------------- |
+//! | Named (3/4-bit, 8/16-color) |     ✓     | `\x1b[30..37;40..47m`    | `Color::Blue`           |
+//! | Indexed (8-bit, 256-color)  |     ✓     | `\x1b[38;5;<N>m`         | `Color::Indexed(1)`     |
+//! | Truecolor (24-bit RGB)      |     ✓     | `\x1b[38;2;<R>;<G>;<B>m` | `Color::Rgb(255, 0, 0)` |
+//!
+//! The SGR examples above set the foreground color (`38`). For background colors, replace `38`
+//! with `48` (for example, `\x1b[48;5;<N>m` and `\x1b[48;2;<R>;<G>;<B>m`).
+//!
+//! # Example
+//!
+//! The input type implements `AsRef<[u8]>`, so it is not consumed.
+//!
 //! ```rust
 //! # fn doctest() -> eyre::Result<()> {
 //! use ansi_to_tui::IntoText as _;
-//! let bytes = b"\x1b[38;2;225;192;203mAAAAA\x1b[0m".to_owned().to_vec();
+//! let bytes = b"\x1b[38;2;225;192;203mAAAAA\x1b[0m".to_vec();
 //! let text = bytes.into_text()?;
 //! # Ok(()) }
 //! ```
-//! Example parsing from a file.
+//!
+//! Parsing from a file.
+//!
 //! ```rust
 //! # fn doctest() -> eyre::Result<()> {
 //! use ansi_to_tui::IntoText as _;
@@ -33,11 +50,10 @@
 //! # Ok(()) }
 //! ```
 //!
-//! If you want to use [`simdutf8`][simdutf8] instead of `String::from_utf8()`  
-//! for parsing UTF-8 then enable optional feature `simd`  
-//!  
-//! [Text]: https://docs.rs/tui/0.15.0/tui/text/struct.Text.html
-//! [ansi-to-tui]: https://github.com/uttarayan21/ansi-to-tui
+//! [Text]: https://docs.rs/ratatui-core/latest/ratatui_core/text/struct.Text.html
+//! [Color]: https://docs.rs/ratatui-core/latest/ratatui_core/style/enum.Color.html
+//! [Style]: https://docs.rs/ratatui-core/latest/ratatui_core/style/struct.Style.html
+//! [Modifier]: https://docs.rs/ratatui-core/latest/ratatui_core/style/struct.Modifier.html
 //! [simdutf8]: https://github.com/rusticstuff/simdutf8
 
 // mod ansi;
@@ -47,15 +63,61 @@ mod parser;
 pub use error::Error;
 use ratatui_core::text::Text;
 
-/// IntoText will convert any type that has a AsRef<[u8]> to a Text.
+/// Parse ANSI SGR styled bytes into a Ratatui [`Text`].
+///
+/// This trait is implemented for all `T: AsRef<[u8]>`, so most byte containers can call
+/// [`IntoText::into_text`]. With the `zero-copy` feature enabled, you can also call
+/// [`IntoText::to_text`].
+///
+/// For example, `String`, `&str`, `Vec<u8>`, and `&[u8]` all implement `AsRef<[u8]>`.
+///
+/// You may also implement this trait for your own types if you want custom conversions.
+///
+/// # Example
+///
+/// ```rust
+/// use ansi_to_tui::IntoText as _;
+///
+/// let s: &str = "\x1b[34mblue\x1b[0m";
+/// let _text = s.into_text()?;
+///
+/// let owned: String = "\x1b[31mred\x1b[0m".to_owned();
+/// let _text = owned.into_text()?;
+/// # Ok::<(), ansi_to_tui::Error>(())
+/// ```
 pub trait IntoText {
-    /// Convert the type to a Text.
+    /// Convert the type to an owned `Text`.
+    ///
+    /// This always returns a `Text<'static>`, so it allocates owned strings for the parsed spans.
     #[allow(clippy::wrong_self_convention)]
     fn into_text(&self) -> Result<Text<'static>, Error>;
-    /// Convert the type to a Text while trying to copy as less as possible
+
+    /// Convert the type to a borrowed `Text` while trying to copy as little as possible.
+    ///
+    /// This method borrows the span contents from the input instead of allocating new strings,
+    /// so the returned `Text` is only valid as long as the input is alive.
+    ///
+    /// Use this when you only need the parsed `Text` temporarily (for example, render it
+    /// immediately). If you need to store the result beyond the lifetime of the input, use
+    /// [`IntoText::into_text`] instead.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "zero-copy")]
+    /// # {
+    /// use ansi_to_tui::IntoText as _;
+    ///
+    /// let bytes = b"\x1b[32mgreen\x1b[0m";
+    /// let _text = bytes.to_text()?;
+    /// # }
+    /// # Ok::<(), ansi_to_tui::Error>(())
+    /// ```
     #[cfg(feature = "zero-copy")]
     fn to_text(&self) -> Result<Text<'_>, Error>;
 }
+
+/// Blanket implementation for all `AsRef<[u8]>` types.
 impl<T> IntoText for T
 where
     T: AsRef<[u8]>,

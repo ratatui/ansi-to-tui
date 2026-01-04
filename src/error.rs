@@ -1,19 +1,20 @@
-/// This enum stores the error types
+/// Errors returned by this crate.
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum Error {
-    /// Stack is empty (should never happen)
-    #[error("Internal error: stack is empty")]
+    /// Parsing failed.
+    ///
+    /// This is currently a formatted representation of a `nom` parse error.
+    #[error("Parse error: {0}")]
     NomError(String),
 
-    /// Error parsing the input as utf-8
+    /// The input contains invalid UTF-8.
     #[cfg(feature = "simd")]
-    /// Cannot determine the foreground or background
-    #[error("{0:?}")]
+    #[error(transparent)]
     Utf8Error(#[from] simdutf8::basic::Utf8Error),
 
+    /// The input contains invalid UTF-8.
     #[cfg(not(feature = "simd"))]
-    /// Cannot determine the foreground or background
-    #[error("{0:?}")]
+    #[error(transparent)]
     Utf8Error(#[from] std::string::FromUtf8Error),
 }
 
