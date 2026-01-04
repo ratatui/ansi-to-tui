@@ -1,12 +1,12 @@
 use crate::code::AnsiCode;
 use nom::{
+    AsChar, IResult, Parser,
     branch::alt,
     bytes::complete::*,
     character::complete::*,
     combinator::{map_res, opt},
     multi::*,
     sequence::{delimited, preceded},
-    AsChar, IResult, Parser,
 };
 use ratatui_core::{
     style::{Color, Modifier, Style, Stylize},
@@ -215,6 +215,7 @@ fn span_fast(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::err
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn style(
     style: Style,
 ) -> impl Fn(&[u8]) -> IResult<&[u8], Option<Style>, nom::error::Error<&[u8]>> {

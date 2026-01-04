@@ -2,7 +2,7 @@
   description = "A simple rust flake using rust-overlay and craneLib";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     flake-utils.url = "github:numtide/flake-utils";
     crane.url = "github:ipetkov/crane";
     nix-github-actions = {
@@ -39,11 +39,13 @@
         };
         inherit (pkgs) lib;
 
-        stableToolchain = pkgs.rust-bin.stable.latest.default;
-        stableToolchainWithLLvmTools = pkgs.rust-bin.stable.latest.default.override {
+        # Keep the Nix toolchain aligned with the crate's MSRV and edition.
+        rustVersion = "1.86.0";
+        stableToolchain = pkgs.rust-bin.stable."${rustVersion}".default;
+        stableToolchainWithLLvmTools = pkgs.rust-bin.stable."${rustVersion}".default.override {
           extensions = ["rust-src" "llvm-tools"];
         };
-        stableToolchainWithRustAnalyzer = pkgs.rust-bin.stable.latest.default.override {
+        stableToolchainWithRustAnalyzer = pkgs.rust-bin.stable."${rustVersion}".default.override {
           extensions = ["rust-src" "rust-analyzer"];
         };
         craneLib = (crane.mkLib pkgs).overrideToolchain stableToolchain;
