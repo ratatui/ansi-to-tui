@@ -38,6 +38,91 @@ fn preserves_empty_lines_when_splitting_on_newlines() {
 }
 
 #[test]
+/// Characterization: this parser only treats `\n` as a line break.
+///
+/// This matches the current implementation (`take_while(|c| c != b'\n')`) and means `\r` is
+/// preserved as a literal character when parsing Windows line endings (`\r\n`).
+///
+/// Whether this is "correct" depends on the caller:
+/// - For files with CRLF, callers may want to pre-normalize line endings.
+/// - For terminal output, `\r` can be meaningful (carriage return without a newline).
+fn splits_only_on_lf_and_preserves_cr_in_crlf() {
+    let bytes = "LINE_1\r\nLINE_2\r\nLINE_3".as_bytes().to_vec();
+    let output = Text::from(vec![
+        Line::from("LINE_1\r"),
+        Line::from("LINE_2\r"),
+        Line::from("LINE_3"),
+    ]);
+    test_both(bytes, output);
+}
+
+#[test]
+/// Characterization: `\r` is not treated as a newline.
+///
+/// This is consistent with terminals using `\r` as "carriage return" for in-place updates, and it
+/// keeps the parser from guessing at terminal semantics that Ratatui's `Text` cannot represent.
+fn lone_cr_is_not_treated_as_a_newline() {
+    let bytes = "ABC\rDEF".as_bytes().to_vec();
+    let output = Text::raw("ABC\rDEF");
+    test_both(bytes, output);
+}
+
+#[test]
+/// Characterization: mixed `\n`/`\r\n` line endings keep the `\r` on CRLF lines.
+///
+/// This locks in the current behavior so that any future "normalize CRLF" change is explicit and
+/// comes with updated expectations.
+fn mixed_lf_and_crlf_line_endings_preserve_cr() {
+    let bytes = "A\nB\r\nC\nD\r\nE".as_bytes().to_vec();
+    let output = Text::from(vec![
+        Line::from("A"),
+        Line::from("B\r"),
+        Line::from("C"),
+        Line::from("D\r"),
+        Line::from("E"),
+    ]);
+    test_both(bytes, output);
+}
+
+#[test]
+/// Characterization: a CRLF-only input produces a single line containing `"\r"`.
+///
+/// If we ever decide to normalize CRLF to LF, this would become an empty line instead.
+fn crlf_blank_line_is_parsed_as_a_carriage_return() {
+    let bytes = "\r\n".as_bytes().to_vec();
+    let output = Text::from(Line::from("\r"));
+    test_both(bytes, output);
+}
+
+#[test]
+/// Characterization: `\r` is preserved even when followed by non-SGR escape sequences.
+///
+/// Many CLIs use `\r` (return to start of line) + `ESC[K` (erase to end of line) for progress
+/// updates. This crate currently ignores `ESC[K` and does not implement cursor/erase semantics, so
+/// the best it can do is preserve the raw `\r` and keep the visible text.
+fn cr_before_non_sgr_escape_sequence_is_preserved() {
+    let bytes: Vec<u8> = b"\r\x1b[KOVERWRITE".to_vec();
+    let output = Text::from(Line::from(vec![Span::raw("\r"), Span::raw("OVERWRITE")]));
+    test_both(bytes, output);
+}
+
+#[test]
+/// Characterization: `\r` stays inside the current span, and the style carries across the `\n`.
+///
+/// This documents two behaviors:
+/// - CRLF does not end (or strip) the current styled text; the `\r` is part of the span content.
+/// - The "current style" is carried across lines, which matches how this crate renders streams of
+///   terminal output.
+fn crlf_preserves_cr_in_spans_and_carries_style_across_lines() {
+    let bytes: Vec<u8> = b"A\x1b[31mB\r\nC".to_vec();
+    let output = Text::from(vec![
+        Line::from(vec![Span::raw("A"), "B\r".red()]),
+        Line::from("C".red()),
+    ]);
+    test_both(bytes, output);
+}
+
+#[test]
 fn ignores_truncated_escape_sequence() {
     let bytes = b"\x1b[";
     let output = Text::raw("");
