@@ -132,7 +132,7 @@ impl From<u8> for AnsiCode {
             104 => AnsiCode::BackgroundColor(Color::LightBlue),
             105 => AnsiCode::BackgroundColor(Color::LightMagenta),
             106 => AnsiCode::BackgroundColor(Color::LightCyan),
-            107 => AnsiCode::ForegroundColor(Color::White),
+            107 => AnsiCode::BackgroundColor(Color::White),
             code => AnsiCode::Code(vec![code]),
         }
     }
