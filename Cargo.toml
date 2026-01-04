@@ -3,7 +3,7 @@ name = "ansi-to-tui"
 version = "8.0.0"
 authors = ["Uttarayan Mondal <email@uttarayan.me>"]
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.86"
 description = "Convert ANSI color and style codes into Ratatui Text"
 keywords = ["ansi", "ascii", "ratatui", "parser", "style"]
 license = "MIT"
@@ -21,7 +21,7 @@ thiserror = "2"
 
 [dev-dependencies]
 anyhow = "1"
-criterion = "0.7"
+criterion = "0.8"
 eyre = "0.6"
 pretty_assertions = "1.4"
 

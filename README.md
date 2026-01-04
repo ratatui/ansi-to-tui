@@ -27,6 +27,8 @@ let buffer = std::fs::read("ascii/text.ascii")?;
 let output = buffer.into_text()?;
 ```
 
+Contributing and CI details are in [`CONTRIBUTING.md`][Contributing].
+
 [Text]: https://docs.rs/ratatui-core/latest/ratatui_core/text/struct.Text.html
 [Color]: https://docs.rs/ratatui-core/latest/ratatui_core/style/enum.Color.html
 [Style]: https://docs.rs/ratatui-core/latest/ratatui_core/style/struct.Style.html
@@ -37,9 +39,10 @@ let output = buffer.into_text()?;
 [Repo]: https://github.com/ratatui/ansi-to-tui
 [Docs Badge]: https://img.shields.io/badge/docs-ansi--to--tui-blue?logo=rust
 [Docs]: https://docs.rs/ansi-to-tui
+[Contributing]: CONTRIBUTING.md
 [License Badge]: https://img.shields.io/crates/l/ansi-to-tui
 [License]: LICENSE
-[CI Badge]: https://github.com/ratatui/ansi-to-tui/actions/workflows/build.yaml/badge.svg
-[CI]: https://github.com/ratatui/ansi-to-tui/actions/workflows/build.yaml
-[Codecov Badge]: https://codecov.io/gh/ratatui/ansi-to-tui/branch/master/graph/badge.svg
+[CI Badge]: https://github.com/ratatui/ansi-to-tui/actions/workflows/build.yml/badge.svg
+[CI]: https://github.com/ratatui/ansi-to-tui/actions/workflows/build.yml
+[Codecov Badge]: https://codecov.io/gh/ratatui/ansi-to-tui/branch/main/graph/badge.svg
 [Codecov]: https://codecov.io/gh/ratatui/ansi-to-tui

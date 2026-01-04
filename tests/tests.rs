@@ -272,8 +272,14 @@ pub fn test_both(bytes: impl AsRef<[u8]>, other: Text) {
     let zero_copy = bytes.to_text().unwrap();
     let owned = bytes.into_text().unwrap();
     #[cfg(feature = "zero-copy")]
-    assert_eq!(zero_copy, owned, "zero-copy and owned version of the methods have diverged this is for sure a bug in the library");
-    assert_eq!(owned, other, "owned and other have diverged this migh be due to a bug in the library or maybe an update to the ratatui crate");
+    assert_eq!(
+        zero_copy, owned,
+        "zero-copy and owned version of the methods have diverged this is for sure a bug in the library"
+    );
+    assert_eq!(
+        owned, other,
+        "owned and other have diverged this migh be due to a bug in the library or maybe an update to the ratatui crate"
+    );
     #[cfg(feature = "zero-copy")]
     assert_eq!(zero_copy, other);
 }
