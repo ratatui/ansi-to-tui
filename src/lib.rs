@@ -56,12 +56,14 @@
 //! [Modifier]: https://docs.rs/ratatui-core/latest/ratatui_core/style/struct.Modifier.html
 //! [simdutf8]: https://github.com/rusticstuff/simdutf8
 
-// mod ansi;
+pub use error::Error;
+use ratatui_core::text::Text;
+
 mod code;
 mod error;
 mod parser;
-pub use error::Error;
-use ratatui_core::text::Text;
+#[cfg(test)]
+mod tests;
 
 /// Parse ANSI SGR styled bytes into a Ratatui [`Text`].
 ///

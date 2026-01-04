@@ -103,8 +103,9 @@ jobs:
         with:
           tool: cargo-llvm-cov
       - run: cargo llvm-cov --all-features --lcov --output-path lcov.info
-      - uses: codecov/codecov-action@v4.0.1
+      - uses: codecov/codecov-action@v5
         with:
+          slug: ratatui/ansi-to-tui
           files: lcov.info
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}

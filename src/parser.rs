@@ -60,6 +60,7 @@ impl From<AnsiStates> for ratatui_core::style::Style {
                     style = style.remove_modifier(Modifier::SLOW_BLINK | Modifier::RAPID_BLINK)
                 }
                 AnsiCode::Reverse => style = style.add_modifier(Modifier::REVERSED),
+                AnsiCode::InvertOff => style = style.remove_modifier(Modifier::REVERSED),
                 AnsiCode::Conceal => style = style.add_modifier(Modifier::HIDDEN),
                 AnsiCode::Reveal => style = style.remove_modifier(Modifier::HIDDEN),
                 AnsiCode::CrossedOut => style = style.add_modifier(Modifier::CROSSED_OUT),
