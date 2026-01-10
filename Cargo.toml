@@ -1,6 +1,6 @@
 [package]
 name = "ansi-to-tui"
-version = "8.0.0"
+version = "8.0.1"
 authors = ["Uttarayan Mondal <email@uttarayan.me>"]
 edition = "2024"
 rust-version = "1.86"

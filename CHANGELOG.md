@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.0.1](https://github.com/ratatui/ansi-to-tui/compare/v8.0.0...v8.0.1) - 2026-01-10
+
+### Fixed
+
+- *(parser)* normalize CR and CRLF newlines ([#80](https://github.com/ratatui/ansi-to-tui/pull/80))
+
+### Other
+
+- *(deps)* bump lru from 0.16.2 to 0.16.3 ([#81](https://github.com/ratatui/ansi-to-tui/pull/81))
+- add CR/LF characterization tests ([#79](https://github.com/ratatui/ansi-to-tui/pull/79))
+- Add SGR tests; handle 27 and fix 107 ([#78](https://github.com/ratatui/ansi-to-tui/pull/78))
+- add cargo workflow alongside Nix ([#77](https://github.com/ratatui/ansi-to-tui/pull/77))
+- polish Ratatui docs and metadata ([#76](https://github.com/ratatui/ansi-to-tui/pull/76))
+- update license ([#74](https://github.com/ratatui/ansi-to-tui/pull/74))
+
 ## [8.0.0](https://github.com/ratatui/ansi-to-tui/compare/v7.0.0...v8.0.0) - 2025-12-26
 
 ### Fixed
