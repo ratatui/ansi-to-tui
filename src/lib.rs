@@ -61,6 +61,7 @@ use ratatui_core::text::Text;
 
 mod code;
 mod error;
+mod hyperlink;
 mod parser;
 #[cfg(test)]
 mod tests;
@@ -117,6 +118,10 @@ pub trait IntoText {
     /// ```
     #[cfg(feature = "zero-copy")]
     fn to_text(&self) -> Result<Text<'_>, Error>;
+
+    /// Same as [`IntoText::to_text`] but returns a [`hyperlink::HyperlinkedText`] that also parses
+    /// OSC 8 hyperlinks.
+    fn to_text_hyperlinked(&self) -> Result<hyperlink::HyperlinkedText<'_>, Error>;
 }
 
 /// Blanket implementation for all `AsRef<[u8]>` types.
@@ -131,5 +136,9 @@ where
     #[cfg(feature = "zero-copy")]
     fn to_text(&self) -> Result<Text<'_>, Error> {
         Ok(crate::parser::text_fast(self.as_ref())?.1)
+    }
+
+    fn to_text_hyperlinked(&self) -> Result<hyperlink::HyperlinkedText<'_>, Error> {
+        Ok(crate::parser::text_hyperlinked(self.as_ref())?.1)
     }
 }

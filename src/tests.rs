@@ -523,6 +523,17 @@ fn carries_style_across_lines_and_handles_resets() {
     test_both(bytes, output);
 }
 
+fn encode_osc8(label: &str, url: &str) -> String {
+    format!("\u{1b}]8;;{url}\u{1b}\\{label}\u{1b}]8;;\u{1b}\\")
+}
+
+#[test]
+fn integration_test_hyperlinks() {
+    let bytes = encode_osc8("Google", "https://www.google.com");
+    println!("Hyperlink -> {}", bytes);
+    dbg!(bytes.to_text_hyperlinked());
+}
+
 #[track_caller]
 fn test_both(bytes: impl AsRef<[u8]>, other: Text) {
     let bytes = bytes.as_ref();

@@ -1,4 +1,7 @@
-use crate::code::AnsiCode;
+use crate::{
+    code::AnsiCode,
+    hyperlink::{Hyperlink, HyperlinkedLine, HyperlinkedSpan, HyperlinkedText, StyledHyperlink},
+};
 use nom::{
     AsChar, IResult, Parser,
     branch::alt,
@@ -23,13 +26,13 @@ enum ColorType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct AnsiItem {
-    code: AnsiCode,
-    color: Option<Color>,
+pub(crate) struct AnsiItem {
+    pub(crate) code: AnsiCode,
+    pub(crate) color: Option<Color>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct AnsiStates {
+pub(crate) struct AnsiStates {
     pub items: smallvec::SmallVec<[AnsiItem; 2]>,
     pub style: Style,
 }
@@ -100,6 +103,20 @@ pub(crate) fn text(mut s: &[u8]) -> IResult<&[u8], Text<'static>> {
     Ok((s, Text::from(lines)))
 }
 
+pub(crate) fn text_hyperlinked(mut s: &[u8]) -> IResult<&[u8], HyperlinkedText<'_>> {
+    let mut lines = Vec::new();
+    let mut last = Style::new();
+    while let Ok((_s, (line, style))) = line_hyperlinked(last)(s) {
+        lines.push(line);
+        last = style;
+        s = _s;
+        if s.is_empty() {
+            break;
+        }
+    }
+    Ok((s, HyperlinkedText::from(lines)))
+}
+
 #[cfg(feature = "zero-copy")]
 pub(crate) fn text_fast(mut s: &[u8]) -> IResult<&[u8], Text<'_>> {
     let mut lines = Vec::new();
@@ -141,6 +158,31 @@ fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)
         }
 
         Ok((s, (Line::from(spans), last)))
+    }
+}
+
+fn line_hyperlinked(
+    style: Style,
+) -> impl Fn(&[u8]) -> IResult<&[u8], (HyperlinkedLine<'_>, Style)> {
+    move |s: &[u8]| -> IResult<&[u8], (HyperlinkedLine<'_>, Style)> {
+        let (s, mut text) = take_while(|c| c != b'\n' && c != b'\r').parse(s)?;
+        let (s, _) = opt(newline).parse(s)?;
+        let mut spans = Vec::new();
+        let mut last = style;
+        while let Ok((s, span)) = span_hyperlinked(last)(text) {
+            last = last.patch(span.style());
+            // If the spans is empty then it might be possible that the style changes
+            // but there is no text change
+            if !span.is_empty() {
+                spans.push(span);
+            }
+            text = s;
+            if text.is_empty() {
+                break;
+            }
+        }
+
+        Ok((s, (HyperlinkedLine::from(spans), last)))
     }
 }
 
@@ -194,6 +236,42 @@ fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::err
         }
 
         Ok((s, Span::styled(text.to_owned(), last)))
+    }
+}
+
+fn span_hyperlinked(
+    last: Style,
+) -> impl Fn(&[u8]) -> IResult<&[u8], HyperlinkedSpan<'_>, nom::error::Error<&[u8]>> {
+    move |s: &[u8]| -> IResult<&[u8], HyperlinkedSpan<'_>> {
+        let mut last = last;
+        let (s, style) = opt(style(last)).parse(s)?;
+
+        #[cfg(feature = "simd")]
+        let text_parser = map_res(
+            take_while(|c| c != b'\x1b' && c != b'\n' && c != b'\r'),
+            |t| simdutf8::basic::from_utf8(t),
+        );
+
+        #[cfg(not(feature = "simd"))]
+        let text_parser = map_res(
+            take_while(|c| c != b'\x1b' && c != b'\n' && c != b'\r'),
+            |t| std::str::from_utf8(t),
+        );
+
+        if let Some(style) = style.flatten() {
+            last = last.patch(style);
+        }
+
+        hyperlink
+            .map_res(|v| v.parse())
+            .map(|v| {
+                HyperlinkedSpan::Hyperlink(StyledHyperlink {
+                    hyperlink: v,
+                    style: last,
+                })
+            })
+            .or(text_parser.map(|v| HyperlinkedSpan::Span(Span::styled(v, last))))
+            .parse(s)
     }
 }
 
@@ -265,6 +343,11 @@ fn any_escape_sequence(s: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
     //
     // We should try to consume as much of it as possible to match behavior of most terminals;
     // where we fail at that we should at least consume the escape char to avoid infinitely looping
+    if hyperlink(s).is_ok() {
+        // This is a hack for now, we need to parse it at the span level but this removes it before
+        // that
+        return Ok((s, None));
+    }
 
     let (input, garbage) = preceded(
         char('\x1b'),
@@ -306,6 +389,19 @@ fn color(s: &[u8]) -> IResult<&[u8], Color> {
             Ok((s, Color::Indexed(index)))
         }
     }
+}
+
+/// A osc 8 hyperlink
+/// Format: `\x1b]8;;<url>\x1b\\<text>\x1b]8;;\x1b\\`
+///
+/// format!("\u{1b}]8;;{url}\u{1b}\\{label}\u{1b}]8;;\u{1b}\\")
+fn hyperlink<'a>(s: &'a [u8]) -> IResult<&'a [u8], Hyperlink<'a, [u8]>> {
+    let (s, _) = tag("\x1b]8;;").parse(s)?;
+    let (s, url) = take_until("\x1b\\").parse(s)?;
+    let (s, _) = tag("\x1b\\").parse(s)?;
+    let (s, text) = take_until("\x1b]8;;").parse(s)?;
+    let (s, _) = tag("\x1b]8;;\x1b\\").parse(s)?;
+    Ok((s, Hyperlink::new(text, url)))
 }
 
 fn color_type(s: &[u8]) -> IResult<&[u8], ColorType> {
@@ -397,4 +493,45 @@ fn ansi_items_test() {
             .into()
         })
     );
+}
+
+#[cfg(test)]
+mod test_hyperlinks {
+    fn encode_osc8(label: &str, url: &str) -> String {
+        format!("\u{1b}]8;;{url}\u{1b}\\{label}\u{1b}]8;;\u{1b}\\")
+    }
+
+    #[test]
+    fn unit_test_hyperlink() {
+        let label = "Google";
+        let url = "https://www.google.com";
+        let encoded = encode_osc8(label, url);
+        let parsed = super::hyperlink(encoded.as_bytes()).unwrap().1;
+        assert_eq!(parsed.text, label.as_bytes());
+        assert_eq!(parsed.url, url.as_bytes());
+        dbg!(parsed);
+    }
+
+    #[test]
+    fn test_hyperlink_in_text() {
+        let label = "Google";
+        let url = "https://www.google.com";
+        let encoded = format!(
+            "Hello {}! This should be a hyperlink",
+            encode_osc8(label, url)
+        );
+        let parsed = super::text_hyperlinked(encoded.as_bytes()).unwrap().1;
+    }
+
+    #[test]
+    fn test_hyperlink_with_style() {
+        let label = "Google";
+        let url = "https://www.google.com";
+        let encoded = format!(
+            "Hello \x1b[1m{}{}! This should be a bold hyperlink\x1b[0m",
+            encode_osc8(label, url),
+            "\x1b[1m"
+        );
+        let parsed = super::text_hyperlinked(encoded.as_bytes()).unwrap().1;
+    }
 }
