@@ -18,6 +18,18 @@ pub enum HyperlinkedSpan<'a> {
     Hyperlink(StyledHyperlink<'a>),
 }
 
+impl<'a> From<Span<'a>> for HyperlinkedSpan<'a> {
+    fn from(span: Span<'a>) -> Self {
+        HyperlinkedSpan::Span(span)
+    }
+}
+
+impl<'a> From<StyledHyperlink<'a>> for HyperlinkedSpan<'a> {
+    fn from(hyperlink: StyledHyperlink<'a>) -> Self {
+        HyperlinkedSpan::Hyperlink(hyperlink)
+    }
+}
+
 impl core::fmt::Display for HyperlinkedSpan<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -32,6 +44,19 @@ impl<'a> HyperlinkedSpan<'a> {
         match self {
             HyperlinkedSpan::Span(span) => span.style,
             HyperlinkedSpan::Hyperlink(hyperlink) => hyperlink.style,
+        }
+    }
+
+    pub fn set_style<S: Into<Style>>(self, style: S) -> Self {
+        match self {
+            HyperlinkedSpan::Span(span) => HyperlinkedSpan::Span(Span {
+                content: span.content,
+                style: style.into(),
+            }),
+            HyperlinkedSpan::Hyperlink(hyperlink) => HyperlinkedSpan::Hyperlink(StyledHyperlink {
+                hyperlink: hyperlink.hyperlink,
+                style: style.into(),
+            }),
         }
     }
 
@@ -53,12 +78,51 @@ impl<'a> HyperlinkedSpan<'a> {
         })
     }
 
-    pub fn styled_span<T, S>(content: T, style: S) -> Self
+    pub fn raw<T>(content: T) -> Self
+    where
+        T: Into<Cow<'a, str>>,
+    {
+        HyperlinkedSpan::Span(Span::raw(content))
+    }
+
+    pub fn hyperlink<T>(text: T, url: T) -> Self
+    where
+        T: Into<Cow<'a, str>>,
+    {
+        HyperlinkedSpan::Hyperlink(StyledHyperlink {
+            hyperlink: Hyperlink::new(text, url),
+            style: Style::default(),
+        })
+    }
+
+    pub fn styled<T, S>(content: T, style: S) -> Self
     where
         T: Into<Cow<'a, str>>,
         S: Into<Style>,
     {
         HyperlinkedSpan::Span(Span::styled(content, style))
+    }
+
+    pub fn link<U>(self, url: U) -> Self
+    where
+        U: Into<Cow<'a, str>>,
+    {
+        match self {
+            HyperlinkedSpan::Span(span) => HyperlinkedSpan::Hyperlink(StyledHyperlink {
+                hyperlink: Hyperlink {
+                    text: span.content,
+                    url: url.into(),
+                },
+                style: span.style,
+            }),
+            HyperlinkedSpan::Hyperlink(hyperlink) => HyperlinkedSpan::Hyperlink(StyledHyperlink {
+                hyperlink: Hyperlink {
+                    text: hyperlink.hyperlink.text,
+                    url: url.into(),
+                },
+                style: hyperlink.style,
+            }),
+        }
     }
 
     pub fn span(&self) -> Span<'_> {
@@ -247,4 +311,15 @@ pub(crate) fn render_hyperlink(hyperlink: &StyledHyperlink<'_>, area: Rect, buf:
 #[inline]
 fn encode_osc8(label: &str, url: &str) -> String {
     format!("\x1b]8;;{url}\x1b\\{label}\x1b]8;;\x1b\\")
+}
+
+impl Styled for HyperlinkedSpan<'_> {
+    type Item = Self;
+    fn style(&self) -> Style {
+        self.style()
+    }
+
+    fn set_style<S: Into<Style>>(self, style: S) -> Self::Item {
+        self.set_style(style)
+    }
 }

@@ -59,6 +59,9 @@
 pub use error::Error;
 use ratatui_core::text::Text;
 
+#[cfg(feature = "zero-copy")]
+use crate::hyperlink::HyperlinkedText;
+
 mod code;
 mod error;
 mod hyperlink;
@@ -92,8 +95,9 @@ pub trait IntoText {
     /// Convert the type to an owned `Text`.
     ///
     /// This always returns a `Text<'static>`, so it allocates owned strings for the parsed spans.
-    #[allow(clippy::wrong_self_convention)]
-    fn into_text(&self) -> Result<Text<'static>, Error>;
+    fn into_text(&self) -> Result<HyperlinkedText<'static>, Error> {
+        self.to_text().map(|text| text.make_static())
+    }
 
     /// Convert the type to a borrowed `Text` while trying to copy as little as possible.
     ///
@@ -116,12 +120,7 @@ pub trait IntoText {
     /// # }
     /// # Ok::<(), ansi_to_tui::Error>(())
     /// ```
-    #[cfg(feature = "zero-copy")]
-    fn to_text(&self) -> Result<Text<'_>, Error>;
-
-    /// Same as [`IntoText::to_text`] but returns a [`hyperlink::HyperlinkedText`] that also parses
-    /// OSC 8 hyperlinks.
-    fn to_text_hyperlinked(&self) -> Result<hyperlink::HyperlinkedText<'_>, Error>;
+    fn to_text(&self) -> Result<HyperlinkedText<'_>, Error>;
 }
 
 /// Blanket implementation for all `AsRef<[u8]>` types.
@@ -129,16 +128,7 @@ impl<T> IntoText for T
 where
     T: AsRef<[u8]>,
 {
-    fn into_text(&self) -> Result<Text<'static>, Error> {
-        Ok(crate::parser::text(self.as_ref())?.1)
-    }
-
-    #[cfg(feature = "zero-copy")]
-    fn to_text(&self) -> Result<Text<'_>, Error> {
-        Ok(crate::parser::text_fast(self.as_ref())?.1)
-    }
-
-    fn to_text_hyperlinked(&self) -> Result<hyperlink::HyperlinkedText<'_>, Error> {
-        Ok(crate::parser::text_hyperlinked(self.as_ref())?.1)
+    fn to_text(&self) -> Result<HyperlinkedText<'_>, Error> {
+        Ok(parser::text(self.as_ref())?.1)
     }
 }

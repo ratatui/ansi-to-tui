@@ -89,7 +89,7 @@ impl From<AnsiStates> for ratatui_core::style::Style {
     }
 }
 
-pub(crate) fn text(mut s: &[u8]) -> IResult<&[u8], Text<'static>> {
+pub(crate) fn text(mut s: &[u8]) -> IResult<&[u8], HyperlinkedText<'_>> {
     let mut lines = Vec::new();
     let mut last = Style::new();
     while let Ok((_s, (line, style))) = line(last)(s) {
@@ -100,36 +100,7 @@ pub(crate) fn text(mut s: &[u8]) -> IResult<&[u8], Text<'static>> {
             break;
         }
     }
-    Ok((s, Text::from(lines)))
-}
-
-pub(crate) fn text_hyperlinked(mut s: &[u8]) -> IResult<&[u8], HyperlinkedText<'_>> {
-    let mut lines = Vec::new();
-    let mut last = Style::new();
-    while let Ok((_s, (line, style))) = line_hyperlinked(last)(s) {
-        lines.push(line);
-        last = style;
-        s = _s;
-        if s.is_empty() {
-            break;
-        }
-    }
     Ok((s, HyperlinkedText::from(lines)))
-}
-
-#[cfg(feature = "zero-copy")]
-pub(crate) fn text_fast(mut s: &[u8]) -> IResult<&[u8], Text<'_>> {
-    let mut lines = Vec::new();
-    let mut last = Style::new();
-    while let Ok((_s, (line, style))) = line_fast(last)(s) {
-        lines.push(line);
-        last = style;
-        s = _s;
-        if s.is_empty() {
-            break;
-        }
-    }
-    Ok((s, Text::from(lines)))
 }
 
 fn newline(s: &[u8]) -> IResult<&[u8], ()> {
@@ -137,39 +108,13 @@ fn newline(s: &[u8]) -> IResult<&[u8], ()> {
     Ok((s, ()))
 }
 
-fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)> {
-    // let style_: Style = Default::default();
-    move |s: &[u8]| -> IResult<&[u8], (Line<'static>, Style)> {
-        let (s, mut text) = take_while(|c| c != b'\n' && c != b'\r').parse(s)?;
-        let (s, _) = opt(newline).parse(s)?;
-        let mut spans = Vec::new();
-        let mut last = style;
-        while let Ok((s, span)) = span(last)(text) {
-            // Since reset now tracks seperately we can skip the reset check
-            last = last.patch(span.style);
-
-            if !span.content.is_empty() {
-                spans.push(span);
-            }
-            text = s;
-            if text.is_empty() {
-                break;
-            }
-        }
-
-        Ok((s, (Line::from(spans), last)))
-    }
-}
-
-fn line_hyperlinked(
-    style: Style,
-) -> impl Fn(&[u8]) -> IResult<&[u8], (HyperlinkedLine<'_>, Style)> {
+fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (HyperlinkedLine<'_>, Style)> {
     move |s: &[u8]| -> IResult<&[u8], (HyperlinkedLine<'_>, Style)> {
         let (s, mut text) = take_while(|c| c != b'\n' && c != b'\r').parse(s)?;
         let (s, _) = opt(newline).parse(s)?;
         let mut spans = Vec::new();
         let mut last = style;
-        while let Ok((s, span)) = span_hyperlinked(last)(text) {
+        while let Ok((s, span)) = span(last)(text) {
             last = last.patch(span.style());
             // If the spans is empty then it might be possible that the style changes
             // but there is no text change
@@ -186,60 +131,7 @@ fn line_hyperlinked(
     }
 }
 
-#[cfg(feature = "zero-copy")]
-fn line_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'_>, Style)> {
-    // let style_: Style = Default::default();
-    move |s: &[u8]| -> IResult<&[u8], (Line<'_>, Style)> {
-        let (s, mut text) = take_while(|c| c != b'\n' && c != b'\r').parse(s)?;
-        let (s, _) = opt(newline).parse(s)?;
-        let mut spans = Vec::new();
-        let mut last = style;
-        while let Ok((s, span)) = span_fast(last)(text) {
-            last = last.patch(span.style);
-            // If the spans is empty then it might be possible that the style changes
-            // but there is no text change
-            if !span.content.is_empty() {
-                spans.push(span);
-            }
-            text = s;
-            if text.is_empty() {
-                break;
-            }
-        }
-
-        Ok((s, (Line::from(spans), last)))
-    }
-}
-
-// fn span(s: &[u8]) -> IResult<&[u8], ratatui::text::Span> {
-fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::error::Error<&[u8]>> {
-    move |s: &[u8]| -> IResult<&[u8], Span<'static>> {
-        let mut last = last;
-        let (s, style) = opt(style(last)).parse(s)?;
-
-        #[cfg(feature = "simd")]
-        let (s, text) = map_res(
-            take_while(|c| c != b'\x1b' && c != b'\n' && c != b'\r'),
-            |t| simdutf8::basic::from_utf8(t),
-        )
-        .parse(s)?;
-
-        #[cfg(not(feature = "simd"))]
-        let (s, text) = map_res(
-            take_while(|c| c != b'\x1b' && c != b'\n' && c != b'\r'),
-            |t| std::str::from_utf8(t),
-        )
-        .parse(s)?;
-
-        if let Some(style) = style.flatten() {
-            last = last.patch(style);
-        }
-
-        Ok((s, Span::styled(text.to_owned(), last)))
-    }
-}
-
-fn span_hyperlinked(
+fn span(
     last: Style,
 ) -> impl Fn(&[u8]) -> IResult<&[u8], HyperlinkedSpan<'_>, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], HyperlinkedSpan<'_>> {
@@ -272,34 +164,6 @@ fn span_hyperlinked(
             })
             .or(text_parser.map(|v| HyperlinkedSpan::Span(Span::styled(v, last))))
             .parse(s)
-    }
-}
-
-#[cfg(feature = "zero-copy")]
-fn span_fast(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::error::Error<&[u8]>> {
-    move |s: &[u8]| -> IResult<&[u8], Span<'_>> {
-        let mut last = last;
-        let (s, style) = opt(style(last)).parse(s)?;
-
-        #[cfg(feature = "simd")]
-        let (s, text) = map_res(
-            take_while(|c| c != b'\x1b' && c != b'\n' && c != b'\r'),
-            |t| simdutf8::basic::from_utf8(t),
-        )
-        .parse(s)?;
-
-        #[cfg(not(feature = "simd"))]
-        let (s, text) = map_res(
-            take_while(|c| c != b'\x1b' && c != b'\n' && c != b'\r'),
-            |t| std::str::from_utf8(t),
-        )
-        .parse(s)?;
-
-        if let Some(style) = style.flatten() {
-            last = last.patch(style);
-        }
-
-        Ok((s, Span::styled(text, last)))
     }
 }
 
@@ -520,7 +384,12 @@ mod test_hyperlinks {
             "Hello {}! This should be a hyperlink",
             encode_osc8(label, url)
         );
-        let parsed = super::text_hyperlinked(encoded.as_bytes()).unwrap().1;
+        let parsed = super::text(encoded.as_bytes()).unwrap().1;
+        let line = &parsed.lines[0];
+        assert_eq!(line.spans.len(), 3);
+        assert_eq!(line.spans[0].content(), "Hello ");
+        assert_eq!(line.spans[1].content(), label);
+        assert_eq!(line.spans[2].content(), "! This should be a hyperlink");
     }
 
     #[test]
@@ -532,6 +401,17 @@ mod test_hyperlinks {
             encode_osc8(label, url),
             "\x1b[1m"
         );
-        let parsed = super::text_hyperlinked(encoded.as_bytes()).unwrap().1;
+        let parsed = super::text(encoded.as_bytes()).unwrap().1;
+        assert_eq!(parsed.lines.len(), 1);
+        let line = &parsed.lines[0];
+        assert_eq!(line.spans.len(), 3);
+        assert_eq!(line.spans[0].content(), "Hello ");
+        assert_eq!(line.spans[1].content(), label);
+        assert_eq!(line.spans[2].content(), "! This should be a bold hyperlink");
+        assert!(
+            line.spans[1]
+                .style()
+                .has_modifier(ratatui::style::Modifier::BOLD)
+        );
     }
 }

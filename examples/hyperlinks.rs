@@ -105,7 +105,7 @@ fn draw(frame: &mut Frame) {
     ]
     .join("\n");
 
-    match paragraph.to_text_hyperlinked() {
+    match paragraph.to_text() {
         Ok(text) => text.render(inner, frame.buffer_mut()),
         Err(_) => frame.render_widget(Line::raw("(failed to parse)"), inner),
     }

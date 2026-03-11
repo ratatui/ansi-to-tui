@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use ratatui_core::{
     buffer::Buffer,
     layout::{Alignment, Rect},
@@ -6,11 +8,11 @@ use ratatui_core::{
 };
 use unicode_width::UnicodeWidthStr;
 
-use crate::hyperlink::line::HyperlinkedLine;
+use crate::hyperlink::{HyperlinkedSpan, line::HyperlinkedLine};
 
 /// A string split over one or more lines, where each line may contain hyperlinks.
 ///
-/// This is the hyperlink-aware equivalent of [`ratatui_core::text::Text`]. When rendered,
+/// This is the hyperlink-aware equivalent of [`ratatui_core::text::HyperlinkedText`]. When rendered,
 /// hyperlinks produce OSC 8 escape sequences so that supporting terminals display clickable
 /// links.
 #[derive(Default, Clone, Eq, PartialEq, Hash, Debug)]
@@ -95,6 +97,33 @@ impl<'a> HyperlinkedText<'a> {
     pub fn push_line<T: Into<HyperlinkedLine<'a>>>(&mut self, line: T) {
         self.lines.push(line.into());
     }
+
+    pub fn make_static(self) -> HyperlinkedText<'static> {
+        HyperlinkedText {
+            lines: self
+                .lines
+                .into_iter()
+                .map(|line| line.make_static())
+                .collect(),
+            ..self
+        }
+    }
+
+    pub fn raw<T>(content: T) -> Self
+    where
+        T: Into<Cow<'a, str>>,
+    {
+        let lines: Vec<_> = match content.into() {
+            Cow::Borrowed("") => vec![HyperlinkedLine::from("")],
+            Cow::Borrowed(s) => s.lines().map(HyperlinkedLine::from).collect(),
+            Cow::Owned(s) if s.is_empty() => vec![HyperlinkedLine::from("")],
+            Cow::Owned(s) => s
+                .lines()
+                .map(|l| HyperlinkedLine::from(l.to_owned()))
+                .collect(),
+        };
+        Self::from(lines)
+    }
 }
 
 impl UnicodeWidthStr for HyperlinkedText<'_> {
@@ -176,5 +205,62 @@ impl<'a> IntoIterator for &'a mut HyperlinkedText<'a> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter_mut()
+    }
+}
+impl From<String> for HyperlinkedText<'_> {
+    fn from(s: String) -> Self {
+        Self::raw(s)
+    }
+}
+
+impl<'a> From<&'a str> for HyperlinkedText<'a> {
+    fn from(s: &'a str) -> Self {
+        Self::raw(s)
+    }
+}
+
+impl<'a> From<Cow<'a, str>> for HyperlinkedText<'a> {
+    fn from(s: Cow<'a, str>) -> Self {
+        Self::raw(s)
+    }
+}
+
+impl<'a> From<HyperlinkedSpan<'a>> for HyperlinkedText<'a> {
+    fn from(span: HyperlinkedSpan<'a>) -> Self {
+        Self {
+            lines: vec![HyperlinkedLine::from(span)],
+            ..Default::default()
+        }
+    }
+}
+
+impl<'a> From<ratatui_core::text::Span<'a>> for HyperlinkedText<'a> {
+    fn from(span: ratatui_core::text::Span<'a>) -> Self {
+        Self {
+            lines: vec![HyperlinkedLine::from(span)],
+            ..Default::default()
+        }
+    }
+}
+
+impl<'a> From<HyperlinkedLine<'a>> for HyperlinkedText<'a> {
+    fn from(line: HyperlinkedLine<'a>) -> Self {
+        Self {
+            lines: vec![line],
+            ..Default::default()
+        }
+    }
+}
+
+impl<'a, T> FromIterator<T> for HyperlinkedText<'a>
+where
+    T: Into<HyperlinkedLine<'a>>,
+{
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let lines = iter.into_iter().map(Into::into).collect();
+        Self {
+            lines,
+            ..Default::default()
+        }
     }
 }

@@ -4,7 +4,6 @@ use ratatui_core::{
     buffer::Buffer,
     layout::{Alignment, Rect},
     style::{Style, Styled},
-    text::Span,
     widgets::Widget,
 };
 use std::borrow::Cow;
@@ -13,7 +12,7 @@ use unicode_width::UnicodeWidthStr;
 
 /// A line of text consisting of one or more [`HyperlinkedSpan`]s.
 ///
-/// This is the hyperlink-aware equivalent of [`ratatui_core::text::Line`]. Each span may be a
+/// This is the hyperlink-aware equivalent of [`ratatui_core::text::HyperlinkedLine`]. Each span may be a
 /// plain styled span or a styled hyperlink. When rendered, hyperlinks produce OSC 8 escape
 /// sequences so that supporting terminals display clickable links.
 #[derive(Default, Clone, Eq, PartialEq, Hash, Debug)]
@@ -119,6 +118,26 @@ impl<'a> HyperlinkedLine<'a> {
                 .collect(),
         }
     }
+
+    pub fn raw<T>(content: T) -> Self
+    where
+        T: Into<Cow<'a, str>>,
+    {
+        Self {
+            spans: cow_to_spans(content),
+            ..Default::default()
+        }
+    }
+}
+
+fn cow_to_spans<'a>(content: impl Into<Cow<'a, str>>) -> Vec<HyperlinkedSpan<'a>> {
+    match content.into() {
+        Cow::Borrowed(s) => s.lines().map(HyperlinkedSpan::raw).collect(),
+        Cow::Owned(s) => s
+            .lines()
+            .map(|v| HyperlinkedSpan::raw(v.to_string()))
+            .collect(),
+    }
 }
 
 impl UnicodeWidthStr for HyperlinkedLine<'_> {
@@ -161,6 +180,15 @@ impl<'a> From<Vec<HyperlinkedSpan<'a>>> for HyperlinkedLine<'a> {
     }
 }
 
+impl<'a> From<Vec<ratatui_core::text::Span<'a>>> for HyperlinkedLine<'a> {
+    fn from(spans: Vec<ratatui_core::text::Span<'a>>) -> Self {
+        Self {
+            spans: spans.into_iter().map(HyperlinkedSpan::from).collect(),
+            ..Default::default()
+        }
+    }
+}
+
 impl Widget for HyperlinkedLine<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         Widget::render(&self, area, buf);
@@ -175,7 +203,7 @@ impl Widget for &HyperlinkedLine<'_> {
 
 impl HyperlinkedLine<'_> {
     /// An internal implementation method for `Widget::render` that allows the parent widget to
-    /// define a default alignment, to be used if `Line::alignment` is `None`.
+    /// define a default alignment, to be used if `HyperlinkedLine::alignment` is `None`.
     pub(crate) fn render_with_alignment(
         &self,
         area: Rect,
@@ -251,7 +279,7 @@ fn render_spans(
 }
 
 /// Returns an iterator over the spans that lie after a given skip width from the start of the
-/// `Line` (including a partially visible span if the `skip_width` lands within a span).
+/// `HyperlinkedLine` (including a partially visible span if the `skip_width` lands within a span).
 fn spans_after_width<'a>(
     spans: &'a [HyperlinkedSpan],
     mut skip_width: usize,
@@ -276,10 +304,10 @@ fn spans_after_width<'a>(
         })
         .map(|(span, span_width, available_width)| {
             if span_width <= available_width {
-                // Span is fully visible. Clone here is fast as the underlying content is `Cow`.
+                // HyperlinkedSpan is fully visible. Clone here is fast as the underlying content is `Cow`.
                 return (span.clone(), span_width, 0u16);
             }
-            // Span is only partially visible. As the end is truncated by the area width, only
+            // HyperlinkedSpan is only partially visible. As the end is truncated by the area width, only
             // truncate the start of the span.
             let (content, actual_width) = span.content().unicode_truncate_start(available_width);
 
@@ -293,4 +321,43 @@ fn spans_after_width<'a>(
                 first_grapheme_offset,
             )
         })
+}
+
+impl From<String> for HyperlinkedLine<'_> {
+    fn from(s: String) -> Self {
+        Self::raw(s)
+    }
+}
+
+impl<'a> From<&'a str> for HyperlinkedLine<'a> {
+    fn from(s: &'a str) -> Self {
+        Self::raw(s)
+    }
+}
+
+impl<'a> From<Cow<'a, str>> for HyperlinkedLine<'a> {
+    fn from(s: Cow<'a, str>) -> Self {
+        Self::raw(s)
+    }
+}
+
+impl<'a> From<HyperlinkedSpan<'a>> for HyperlinkedLine<'a> {
+    fn from(span: HyperlinkedSpan<'a>) -> Self {
+        Self::from(vec![span])
+    }
+}
+
+impl<'a, T> FromIterator<T> for HyperlinkedLine<'a>
+where
+    T: Into<HyperlinkedSpan<'a>>,
+{
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        Self::from(iter.into_iter().map(Into::into).collect::<Vec<_>>())
+    }
+}
+
+impl<'a> From<ratatui_core::text::Span<'a>> for HyperlinkedLine<'a> {
+    fn from(span: ratatui_core::text::Span<'a>) -> Self {
+        Self::from(vec![span])
+    }
 }
