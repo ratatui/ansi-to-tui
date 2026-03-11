@@ -200,7 +200,7 @@ pub struct StyledHyperlink<'a> {
     pub(crate) style: Style,
 }
 
-impl<'a> StyledHyperlink<'a> {
+impl StyledHyperlink<'_> {
     pub fn style(&self) -> Style {
         self.style
     }

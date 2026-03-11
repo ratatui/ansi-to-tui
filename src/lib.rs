@@ -95,6 +95,7 @@ pub trait IntoText {
     /// Convert the type to an owned `Text`.
     ///
     /// This always returns a `Text<'static>`, so it allocates owned strings for the parsed spans.
+    #[allow(clippy::wrong_self_convention)]
     fn into_text(&self) -> Result<HyperlinkedText<'static>, Error> {
         self.to_text().map(|text| text.make_static())
     }

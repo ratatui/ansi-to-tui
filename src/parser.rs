@@ -259,7 +259,7 @@ fn color(s: &[u8]) -> IResult<&[u8], Color> {
 /// Format: `\x1b]8;;<url>\x1b\\<text>\x1b]8;;\x1b\\`
 ///
 /// format!("\u{1b}]8;;{url}\u{1b}\\{label}\u{1b}]8;;\u{1b}\\")
-fn hyperlink<'a>(s: &'a [u8]) -> IResult<&'a [u8], Hyperlink<'a, [u8]>> {
+fn hyperlink(s: &[u8]) -> IResult<&[u8], Hyperlink<'_, [u8]>> {
     let (s, _) = tag("\x1b]8;;").parse(s)?;
     let (s, url) = take_until("\x1b\\").parse(s)?;
     let (s, _) = tag("\x1b\\").parse(s)?;
