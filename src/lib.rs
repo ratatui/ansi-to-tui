@@ -59,12 +59,10 @@
 pub use error::Error;
 use ratatui_core::text::Text;
 
-#[cfg(feature = "zero-copy")]
-use crate::hyperlink::HyperlinkedText;
-
 mod code;
 mod error;
 mod hyperlink;
+pub use hyperlink::{HyperlinkedLine, HyperlinkedSpan, HyperlinkedText};
 mod parser;
 #[cfg(test)]
 mod tests;
