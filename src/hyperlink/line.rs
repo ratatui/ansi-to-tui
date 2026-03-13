@@ -12,7 +12,7 @@ use unicode_width::UnicodeWidthStr;
 
 /// A line of text consisting of one or more [`HyperlinkedSpan`]s.
 ///
-/// This is the hyperlink-aware equivalent of [`ratatui_core::text::HyperlinkedLine`]. Each span may be a
+/// This is the hyperlink-aware equivalent of [`HyperlinkedLine`]. Each span may be a
 /// plain styled span or a styled hyperlink. When rendered, hyperlinks produce OSC 8 escape
 /// sequences so that supporting terminals display clickable links.
 #[derive(Default, Clone, Eq, PartialEq, Hash, Debug)]

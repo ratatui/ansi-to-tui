@@ -12,7 +12,7 @@ use crate::hyperlink::{HyperlinkedSpan, line::HyperlinkedLine};
 
 /// A string split over one or more lines, where each line may contain hyperlinks.
 ///
-/// This is the hyperlink-aware equivalent of [`ratatui_core::text::HyperlinkedText`]. When rendered,
+/// This is the hyperlink-aware equivalent of [`HyperlinkedText`]. When rendered,
 /// hyperlinks produce OSC 8 escape sequences so that supporting terminals display clickable
 /// links.
 #[derive(Default, Clone, Eq, PartialEq, Hash, Debug)]

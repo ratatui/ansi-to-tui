@@ -3,13 +3,13 @@ use crate::{
     hyperlink::{Hyperlink, HyperlinkedLine, HyperlinkedSpan, HyperlinkedText},
 };
 use nom::{
-    AsChar, IResult, Parser,
     branch::alt,
     bytes::complete::*,
     character::complete::*,
     combinator::{map_res, opt},
     multi::*,
     sequence::{delimited, preceded},
+    AsChar, IResult, Parser,
 };
 use ratatui_core::{
     style::{Color, Modifier, Style, Stylize},
@@ -410,10 +410,8 @@ mod test_hyperlinks {
         assert_eq!(line.spans[0].content(), "Hello ");
         assert_eq!(line.spans[1].content(), label);
         assert_eq!(line.spans[2].content(), "! This should be a bold hyperlink");
-        assert!(
-            line.spans[1]
-                .style()
-                .has_modifier(ratatui::style::Modifier::BOLD)
-        );
+        assert!(line.spans[1]
+            .style()
+            .has_modifier(ratatui::style::Modifier::BOLD));
     }
 }

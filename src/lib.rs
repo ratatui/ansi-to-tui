@@ -1,13 +1,13 @@
 #![allow(unused_imports)]
 #![warn(missing_docs)]
 
-//! Convert ANSI color and style codes into Ratatui [`Text`][Text].
+//! Convert ANSI color and style codes into Ratatui [`HyperlinkedText`][HyperlinkedText].
 //!
-//! This crate parses bytes containing ANSI SGR escape sequences (like `\x1b[31m`).
-//! It produces a Ratatui [`Text`][Text] with equivalent foreground/background [`Color`][Color] and
-//! [`Modifier`][Modifier] settings via [`Style`][Style].
+//! This crate parses bytes containing ANSI SGR escape sequences (like `\x1b[31m`).  
+//! It produces a Ratatui [`HyperlinkedText`][HyperlinkedText] with equivalent foreground/background [`Color`][Color] and
+//! [`Modifier`][Modifier] settings via [`Style`][Style], with support for OSC 8 hyperlinks.  
 //!
-//! Unknown or malformed escape sequences are ignored, so you can feed it real terminal output
+//! Unknown or malformed escape sequences are ignored, so you can feed it real terminal output  
 //! without having to pre-clean it.
 //!
 //! # Features
@@ -49,14 +49,13 @@
 //! # Ok(()) }
 //! ```
 //!
-//! [Text]: https://docs.rs/ratatui-core/latest/ratatui_core/text/struct.Text.html
+//! [HyperlinkedText]: struct.HyperlinkedText.html
 //! [Color]: https://docs.rs/ratatui-core/latest/ratatui_core/style/enum.Color.html
 //! [Style]: https://docs.rs/ratatui-core/latest/ratatui_core/style/struct.Style.html
 //! [Modifier]: https://docs.rs/ratatui-core/latest/ratatui_core/style/struct.Modifier.html
 //! [simdutf8]: https://github.com/rusticstuff/simdutf8
 
 pub use error::Error;
-use ratatui_core::text::Text;
 
 mod code;
 mod error;
@@ -66,7 +65,7 @@ mod parser;
 #[cfg(test)]
 mod tests;
 
-/// Parse ANSI SGR styled bytes into a Ratatui [`Text`].
+/// Parse ANSI SGR styled bytes into a Ratatui [`HyperlinkedText`].
 ///
 /// This trait is implemented for all `T: AsRef<[u8]>`, so most byte containers can call
 /// either [`IntoText::into_text`]. or [`IntoText::to_text`]
@@ -88,9 +87,9 @@ mod tests;
 /// # Ok::<(), ansi_to_tui::Error>(())
 /// ```
 pub trait IntoText {
-    /// Convert the type to an owned `Text`.
+    /// Convert the type to an owned `HyperlinkedText`.
     ///
-    /// This always returns a `Text<'static>`, so it allocates owned strings for the parsed spans.
+    /// This always returns a `HyperlinkedText<'static>`, so it allocates owned strings for the parsed spans.
     #[allow(clippy::wrong_self_convention)]
     fn into_text(&self) -> Result<HyperlinkedText<'static>, Error> {
         self.to_text().map(|text| text.make_static())
