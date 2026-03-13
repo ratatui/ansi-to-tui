@@ -12,9 +12,12 @@ use std::borrow::Cow;
 use std::string::String;
 use unicode_width::UnicodeWidthStr;
 
+/// A `Span` that can optionally be a hyperlink. This allows us to render hyperlinks with the same API as regular spans, while still supporting the full range of styling options.
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub enum HyperlinkedSpan<'a> {
+    /// A regular span with no hyperlink.
     Span(ratatui_core::text::Span<'a>),
+    /// A hyperlink with associated style.
     Hyperlink(StyledHyperlink<'a>),
 }
 
@@ -40,6 +43,7 @@ impl core::fmt::Display for HyperlinkedSpan<'_> {
 }
 
 impl<'a> HyperlinkedSpan<'a> {
+    /// Get the style of the span or hyperlink.
     pub fn style(&self) -> Style {
         match self {
             HyperlinkedSpan::Span(span) => span.style,
@@ -47,6 +51,7 @@ impl<'a> HyperlinkedSpan<'a> {
         }
     }
 
+    /// Set the style of the span or hyperlink, returning a new `HyperlinkedSpan` with the updated style.
     pub fn set_style<S: Into<Style>>(self, style: S) -> Self {
         match self {
             HyperlinkedSpan::Span(span) => HyperlinkedSpan::Span(Span {
@@ -60,6 +65,7 @@ impl<'a> HyperlinkedSpan<'a> {
         }
     }
 
+    /// Check if the content of the span or hyperlink is empty.
     pub fn is_empty(&self) -> bool {
         match self {
             HyperlinkedSpan::Span(span) => span.content.is_empty(),
@@ -67,6 +73,7 @@ impl<'a> HyperlinkedSpan<'a> {
         }
     }
 
+    /// Create a new `HyperlinkedSpan` with the given text, URL, and style.
     pub fn styled_hyperlink<T, S>(text: T, url: T, style: S) -> Self
     where
         T: Into<Cow<'a, str>>,
@@ -78,6 +85,7 @@ impl<'a> HyperlinkedSpan<'a> {
         })
     }
 
+    /// Create a new `HyperlinkedSpan` with the given text and no style or hyperlink
     pub fn raw<T>(content: T) -> Self
     where
         T: Into<Cow<'a, str>>,
@@ -85,6 +93,7 @@ impl<'a> HyperlinkedSpan<'a> {
         HyperlinkedSpan::Span(Span::raw(content))
     }
 
+    /// Create a new `HyperlinkedSpan` with the given text and URL, using the default style.
     pub fn hyperlink<T>(text: T, url: T) -> Self
     where
         T: Into<Cow<'a, str>>,
@@ -95,6 +104,7 @@ impl<'a> HyperlinkedSpan<'a> {
         })
     }
 
+    /// Create a new `HyperlinkedSpan` with the given text and style, but no hyperlink.
     pub fn styled<T, S>(content: T, style: S) -> Self
     where
         T: Into<Cow<'a, str>>,
@@ -103,6 +113,7 @@ impl<'a> HyperlinkedSpan<'a> {
         HyperlinkedSpan::Span(Span::styled(content, style))
     }
 
+    /// Set the URL of the spana or hyperlink, returning a new `HyperlinkedSpan` with the updated URL. If the original `HyperlinkedSpan` was a regular span, it will be converted into a hyperlink with the same content and style.
     pub fn link<U>(self, url: U) -> Self
     where
         U: Into<Cow<'a, str>>,
@@ -125,16 +136,17 @@ impl<'a> HyperlinkedSpan<'a> {
         }
     }
 
-    pub fn span(&self) -> Span<'_> {
-        match self {
-            HyperlinkedSpan::Span(span) => span.clone(),
-            HyperlinkedSpan::Hyperlink(hyperlink) => Span {
-                content: hyperlink.hyperlink.text.clone(),
-                style: hyperlink.style,
-            },
-        }
-    }
+    // pub fn span(&self) -> Span<'_> {
+    //     match self {
+    //         HyperlinkedSpan::Span(span) => span.clone(),
+    //         HyperlinkedSpan::Hyperlink(hyperlink) => Span {
+    //             content: hyperlink.hyperlink.text.clone(),
+    //             style: hyperlink.style,
+    //         },
+    //     }
+    // }
 
+    /// Map the content of the span or hyperlink using the provided function, returning a new `HyperlinkedSpan` with the updated content. The style and URL (if applicable) will be preserved.
     pub fn map_content<F>(self, f: F) -> Self
     where
         F: FnOnce(Cow<'a, str>) -> Cow<'a, str>,
@@ -154,6 +166,7 @@ impl<'a> HyperlinkedSpan<'a> {
         }
     }
 
+    /// Create a new `HyperlinkedSpan` with the given content, preserving the style and URL (if applicable) of the original span or hyperlink.
     pub fn with_content(&'a self, content: Cow<'a, str>) -> HyperlinkedSpan<'a> {
         match self {
             HyperlinkedSpan::Span(span) => HyperlinkedSpan::Span(Span {
@@ -170,6 +183,8 @@ impl<'a> HyperlinkedSpan<'a> {
         }
     }
 
+    /// Get the content of the span or hyperlink as a string slice.
+    /// This is the part that is rendered, so for hyperlinks it returns the text rather than the URL.
     pub fn content(&self) -> &str {
         match self {
             HyperlinkedSpan::Span(span) => &span.content,
@@ -177,6 +192,7 @@ impl<'a> HyperlinkedSpan<'a> {
         }
     }
 
+    /// Convert the `HyperlinkedSpan` into a version with `'static` lifetime by cloning the content and URL (if applicable). This is useful for storing the `HyperlinkedSpan` in a context where the original lifetime cannot be guaranteed.
     pub fn make_static(self) -> HyperlinkedSpan<'static> {
         match self {
             HyperlinkedSpan::Span(span) => HyperlinkedSpan::Span(Span {

@@ -98,6 +98,7 @@ impl<'a> HyperlinkedText<'a> {
         self.lines.push(line.into());
     }
 
+    /// Converts this text into one with a static lifetime, cloning all the lines in the process.
     pub fn make_static(self) -> HyperlinkedText<'static> {
         HyperlinkedText {
             lines: self
@@ -109,6 +110,7 @@ impl<'a> HyperlinkedText<'a> {
         }
     }
 
+    /// Creates a new `HyperlinkedText` from the given content, splitting it into lines on newline characters.
     pub fn raw<T>(content: T) -> Self
     where
         T: Into<Cow<'a, str>>,

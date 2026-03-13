@@ -107,6 +107,7 @@ impl<'a> HyperlinkedLine<'a> {
         self.spans.push(span.into());
     }
 
+    /// Adds a hyperlink span to the line with the given content and URL.
     pub fn make_static(self) -> HyperlinkedLine<'static> {
         HyperlinkedLine {
             style: self.style,
@@ -119,6 +120,7 @@ impl<'a> HyperlinkedLine<'a> {
         }
     }
 
+    /// Creates a new `HyperlinkedLine` from the given content, splitting it into spans by newlines.
     pub fn raw<T>(content: T) -> Self
     where
         T: Into<Cow<'a, str>>,

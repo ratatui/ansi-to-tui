@@ -373,7 +373,6 @@ mod test_hyperlinks {
         let parsed = super::hyperlink(encoded.as_bytes()).unwrap().1;
         assert_eq!(parsed.text, label.as_bytes());
         assert_eq!(parsed.url, url.as_bytes());
-        dbg!(parsed);
     }
 
     #[test]
