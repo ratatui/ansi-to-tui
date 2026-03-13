@@ -6,7 +6,7 @@ use std::borrow::Cow;
 
 pub use line::HyperlinkedLine;
 pub use span::HyperlinkedSpan;
-pub use span::StyledHyperlink;
+
 pub use text::HyperlinkedText;
 
 use crate::parser::AnsiStates;

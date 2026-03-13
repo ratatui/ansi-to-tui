@@ -1,4 +1,4 @@
-use crate::hyperlink::span::{HyperlinkedSpan, StyledHyperlink, render_hyperlink};
+use crate::hyperlink::span::{HyperlinkedSpan, render_hyperlink};
 
 use ratatui_core::{
     buffer::Buffer,

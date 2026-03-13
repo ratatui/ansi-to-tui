@@ -15,7 +15,6 @@
 //! - UTF-8 decoding via `String::from_utf8` (default) or [`simdutf8`][simdutf8] (`simd` feature).
 //! - SGR styles such as bold, italic, underline, and strikethrough.
 //! - Colors: named (3/4-bit, 8/16-color), indexed (8-bit, 256-color), and truecolor (24-bit RGB).
-//! - Optional `zero-copy` API that borrows from the input.
 //!
 //! # Supported Color Codes
 //!
@@ -70,8 +69,7 @@ mod tests;
 /// Parse ANSI SGR styled bytes into a Ratatui [`Text`].
 ///
 /// This trait is implemented for all `T: AsRef<[u8]>`, so most byte containers can call
-/// [`IntoText::into_text`]. With the `zero-copy` feature enabled, you can also call
-/// [`IntoText::to_text`].
+/// either [`IntoText::into_text`]. or [`IntoText::to_text`]
 ///
 /// For example, `String`, `&str`, `Vec<u8>`, and `&[u8]` all implement `AsRef<[u8]>`.
 ///
@@ -98,19 +96,20 @@ pub trait IntoText {
         self.to_text().map(|text| text.make_static())
     }
 
-    /// Convert the type to a borrowed `Text` while trying to copy as little as possible.
+    /// Convert the type to a borrowed `HyperlinkedText` while trying to copy as little as possible.
     ///
     /// This method borrows the span contents from the input instead of allocating new strings,
-    /// so the returned `Text` is only valid as long as the input is alive.
+    /// so the returned `HyperlinkedText` is only valid as long as the input is alive.
     ///
-    /// Use this when you only need the parsed `Text` temporarily (for example, render it
+    /// You can convert it to HyperlinkedText<'static> by calling .make_static() on HyperlinkedText
+    ///
+    /// Use this when you only need the parsed `HyperlinkedText` temporarily (for example, render it
     /// immediately). If you need to store the result beyond the lifetime of the input, use
     /// [`IntoText::into_text`] instead.
     ///
     /// # Example
     ///
     /// ```rust
-    /// # #[cfg(feature = "zero-copy")]
     /// # {
     /// use ansi_to_tui::IntoText as _;
     ///

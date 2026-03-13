@@ -32,8 +32,7 @@ ratatui = "0.30.0"
 
 [features]
 simd = ["dep:simdutf8"]
-zero-copy = []
-default = ["zero-copy", "simd"]
+default = ["simd"]
 
 
 [[bench]]

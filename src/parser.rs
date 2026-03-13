@@ -1,6 +1,6 @@
 use crate::{
     code::AnsiCode,
-    hyperlink::{Hyperlink, HyperlinkedLine, HyperlinkedSpan, HyperlinkedText, StyledHyperlink},
+    hyperlink::{Hyperlink, HyperlinkedLine, HyperlinkedSpan, HyperlinkedText},
 };
 use nom::{
     AsChar, IResult, Parser,
@@ -156,13 +156,16 @@ fn span(
 
         hyperlink
             .map_res(|v| v.parse())
-            .map(|v| {
-                HyperlinkedSpan::Hyperlink(StyledHyperlink {
-                    hyperlink: v,
-                    style: last,
-                })
+            .map(|v| HyperlinkedSpan {
+                style: last,
+                content: v.text,
+                url: Some(v.url),
             })
-            .or(text_parser.map(|v| HyperlinkedSpan::Span(Span::styled(v, last))))
+            .or(text_parser.map(|v| HyperlinkedSpan {
+                style: last,
+                content: v.into(),
+                url: None,
+            }))
             .parse(s)
     }
 }

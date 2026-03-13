@@ -547,23 +547,9 @@ fn integration_test_hyperlinks() {
 #[track_caller]
 fn test_both(bytes: impl AsRef<[u8]>, other: HyperlinkedText) {
     let bytes = bytes.as_ref();
-
-    #[cfg(feature = "zero-copy")]
-    let zero_copy = bytes.to_text().unwrap();
-
     let owned = bytes.into_text().unwrap();
-
-    #[cfg(feature = "zero-copy")]
-    assert_eq!(
-        zero_copy, owned,
-        "zero-copy and owned version of the methods have diverged; this is a bug in the library"
-    );
-
     assert_eq!(
         owned, other,
         "owned and other have diverged; this might be a bug in the library or a ratatui update"
     );
-
-    #[cfg(feature = "zero-copy")]
-    assert_eq!(zero_copy, other);
 }

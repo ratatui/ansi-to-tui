@@ -1,76 +1,47 @@
-use crate::hyperlink::Hyperlink;
-
 use core::fmt;
 use ratatui_core::{
     buffer::Buffer,
     layout::{Position, Rect},
     style::{Style, Styled},
-    text::Span,
     widgets::Widget,
 };
 use std::borrow::Cow;
-use std::string::String;
 use unicode_width::UnicodeWidthStr;
 
 /// A `Span` that can optionally be a hyperlink. This allows us to render hyperlinks with the same API as regular spans, while still supporting the full range of styling options.
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
-pub enum HyperlinkedSpan<'a> {
-    /// A regular span with no hyperlink.
-    Span(ratatui_core::text::Span<'a>),
-    /// A hyperlink with associated style.
-    Hyperlink(StyledHyperlink<'a>),
-}
-
-impl<'a> From<Span<'a>> for HyperlinkedSpan<'a> {
-    fn from(span: Span<'a>) -> Self {
-        HyperlinkedSpan::Span(span)
-    }
-}
-
-impl<'a> From<StyledHyperlink<'a>> for HyperlinkedSpan<'a> {
-    fn from(hyperlink: StyledHyperlink<'a>) -> Self {
-        HyperlinkedSpan::Hyperlink(hyperlink)
-    }
+pub struct HyperlinkedSpan<'a> {
+    /// The style of the span.
+    pub style: Style,
+    /// The content of the span as a Clone-on-write string.
+    pub content: Cow<'a, str>,
+    /// The URL associated with the span.
+    pub url: Option<Cow<'a, str>>,
 }
 
 impl core::fmt::Display for HyperlinkedSpan<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            HyperlinkedSpan::Span(span) => write!(f, "{}", span),
-            HyperlinkedSpan::Hyperlink(hyperlink) => write!(f, "{}", hyperlink.hyperlink.text),
-        }
+        write!(f, "{}", self.content)
     }
 }
 
 impl<'a> HyperlinkedSpan<'a> {
-    /// Get the style of the span or hyperlink.
+    /// Get the style of the span.
     pub fn style(&self) -> Style {
-        match self {
-            HyperlinkedSpan::Span(span) => span.style,
-            HyperlinkedSpan::Hyperlink(hyperlink) => hyperlink.style,
-        }
+        self.style
     }
 
-    /// Set the style of the span or hyperlink, returning a new `HyperlinkedSpan` with the updated style.
+    /// Set the style of the span, returning a new `HyperlinkedSpan` with the updated style.
     pub fn set_style<S: Into<Style>>(self, style: S) -> Self {
-        match self {
-            HyperlinkedSpan::Span(span) => HyperlinkedSpan::Span(Span {
-                content: span.content,
-                style: style.into(),
-            }),
-            HyperlinkedSpan::Hyperlink(hyperlink) => HyperlinkedSpan::Hyperlink(StyledHyperlink {
-                hyperlink: hyperlink.hyperlink,
-                style: style.into(),
-            }),
+        Self {
+            style: style.into(),
+            ..self
         }
     }
 
-    /// Check if the content of the span or hyperlink is empty.
+    /// Check if the content of the span is empty.
     pub fn is_empty(&self) -> bool {
-        match self {
-            HyperlinkedSpan::Span(span) => span.content.is_empty(),
-            HyperlinkedSpan::Hyperlink(hyperlink) => hyperlink.hyperlink.text.is_empty(),
-        }
+        self.content.is_empty()
     }
 
     /// Create a new `HyperlinkedSpan` with the given text, URL, and style.
@@ -79,18 +50,23 @@ impl<'a> HyperlinkedSpan<'a> {
         T: Into<Cow<'a, str>>,
         S: Into<Style>,
     {
-        HyperlinkedSpan::Hyperlink(StyledHyperlink {
-            hyperlink: Hyperlink::new(text, url),
+        Self {
             style: style.into(),
-        })
+            content: text.into(),
+            url: Some(url.into()),
+        }
     }
 
-    /// Create a new `HyperlinkedSpan` with the given text and no style or hyperlink
+    /// Create a new `HyperlinkedSpan` with the given text and no style or URL
     pub fn raw<T>(content: T) -> Self
     where
         T: Into<Cow<'a, str>>,
     {
-        HyperlinkedSpan::Span(Span::raw(content))
+        Self {
+            style: Style::default(),
+            content: content.into(),
+            url: None,
+        }
     }
 
     /// Create a new `HyperlinkedSpan` with the given text and URL, using the default style.
@@ -98,163 +74,89 @@ impl<'a> HyperlinkedSpan<'a> {
     where
         T: Into<Cow<'a, str>>,
     {
-        HyperlinkedSpan::Hyperlink(StyledHyperlink {
-            hyperlink: Hyperlink::new(text, url),
+        Self {
             style: Style::default(),
-        })
+            content: text.into(),
+            url: Some(url.into()),
+        }
     }
 
-    /// Create a new `HyperlinkedSpan` with the given text and style, but no hyperlink.
+    /// Create a new `HyperlinkedSpan` with the given text and style, but no URL.
     pub fn styled<T, S>(content: T, style: S) -> Self
     where
         T: Into<Cow<'a, str>>,
         S: Into<Style>,
     {
-        HyperlinkedSpan::Span(Span::styled(content, style))
+        Self {
+            style: style.into(),
+            content: content.into(),
+            url: None,
+        }
     }
 
-    /// Set the URL of the spana or hyperlink, returning a new `HyperlinkedSpan` with the updated URL. If the original `HyperlinkedSpan` was a regular span, it will be converted into a hyperlink with the same content and style.
+    /// Set the URL of the span, returning a new `HyperlinkedSpan` with the updated URL.
     pub fn link<U>(self, url: U) -> Self
     where
         U: Into<Cow<'a, str>>,
     {
-        match self {
-            HyperlinkedSpan::Span(span) => HyperlinkedSpan::Hyperlink(StyledHyperlink {
-                hyperlink: Hyperlink {
-                    text: span.content,
-                    url: url.into(),
-                },
-                style: span.style,
-            }),
-            HyperlinkedSpan::Hyperlink(hyperlink) => HyperlinkedSpan::Hyperlink(StyledHyperlink {
-                hyperlink: Hyperlink {
-                    text: hyperlink.hyperlink.text,
-                    url: url.into(),
-                },
-                style: hyperlink.style,
-            }),
+        Self {
+            url: Some(url.into()),
+            ..self
         }
     }
 
-    // pub fn span(&self) -> Span<'_> {
-    //     match self {
-    //         HyperlinkedSpan::Span(span) => span.clone(),
-    //         HyperlinkedSpan::Hyperlink(hyperlink) => Span {
-    //             content: hyperlink.hyperlink.text.clone(),
-    //             style: hyperlink.style,
-    //         },
-    //     }
-    // }
-
-    /// Map the content of the span or hyperlink using the provided function, returning a new `HyperlinkedSpan` with the updated content. The style and URL (if applicable) will be preserved.
+    /// Map the content of the span using the provided function, returning a new `HyperlinkedSpan` with the updated content. The style and URL will be preserved.
     pub fn map_content<F>(self, f: F) -> Self
     where
         F: FnOnce(Cow<'a, str>) -> Cow<'a, str>,
     {
-        match self {
-            HyperlinkedSpan::Span(span) => HyperlinkedSpan::Span(Span {
-                content: f(span.content),
-                style: span.style,
-            }),
-            HyperlinkedSpan::Hyperlink(hyperlink) => HyperlinkedSpan::Hyperlink(StyledHyperlink {
-                hyperlink: Hyperlink {
-                    text: f(hyperlink.hyperlink.text),
-                    url: hyperlink.hyperlink.url,
-                },
-                style: hyperlink.style,
-            }),
+        Self {
+            content: f(self.content),
+            ..self
         }
     }
 
-    /// Create a new `HyperlinkedSpan` with the given content, preserving the style and URL (if applicable) of the original span or hyperlink.
+    /// Create a new `HyperlinkedSpan` with the given content, preserving the style and URL of the original span.
     pub fn with_content(&'a self, content: Cow<'a, str>) -> HyperlinkedSpan<'a> {
-        match self {
-            HyperlinkedSpan::Span(span) => HyperlinkedSpan::Span(Span {
-                content,
-                style: span.style,
-            }),
-            HyperlinkedSpan::Hyperlink(hyperlink) => HyperlinkedSpan::Hyperlink(StyledHyperlink {
-                hyperlink: Hyperlink {
-                    text: content,
-                    url: hyperlink.hyperlink.url.clone(),
-                },
-                style: hyperlink.style,
-            }),
-        }
-    }
-
-    /// Get the content of the span or hyperlink as a string slice.
-    /// This is the part that is rendered, so for hyperlinks it returns the text rather than the URL.
-    pub fn content(&self) -> &str {
-        match self {
-            HyperlinkedSpan::Span(span) => &span.content,
-            HyperlinkedSpan::Hyperlink(hyperlink) => &hyperlink.hyperlink.text,
-        }
-    }
-
-    /// Convert the `HyperlinkedSpan` into a version with `'static` lifetime by cloning the content and URL (if applicable). This is useful for storing the `HyperlinkedSpan` in a context where the original lifetime cannot be guaranteed.
-    pub fn make_static(self) -> HyperlinkedSpan<'static> {
-        match self {
-            HyperlinkedSpan::Span(span) => HyperlinkedSpan::Span(Span {
-                content: Cow::Owned(span.content.into_owned()),
-                style: span.style,
-            }),
-            HyperlinkedSpan::Hyperlink(hyperlink) => HyperlinkedSpan::Hyperlink(StyledHyperlink {
-                hyperlink: Hyperlink {
-                    text: Cow::Owned(hyperlink.hyperlink.text.into_owned()),
-                    url: Cow::Owned(hyperlink.hyperlink.url.into_owned()),
-                },
-                style: hyperlink.style,
-            }),
-        }
-    }
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
-pub struct StyledHyperlink<'a> {
-    pub(crate) hyperlink: Hyperlink<'a, str>,
-    pub(crate) style: Style,
-}
-
-impl StyledHyperlink<'_> {
-    pub fn style(&self) -> Style {
-        self.style
-    }
-
-    pub fn make_static(self) -> StyledHyperlink<'static> {
-        StyledHyperlink {
-            hyperlink: Hyperlink {
-                text: Cow::Owned(self.hyperlink.text.into_owned()),
-                url: Cow::Owned(self.hyperlink.url.into_owned()),
-            },
+        Self {
+            content,
             style: self.style,
+            url: self.url.clone(),
+        }
+    }
+
+    /// Get the content of the span as a string slice.
+    pub fn content(&self) -> &str {
+        &self.content
+    }
+
+    /// Convert the `HyperlinkedSpan` into a version with `'static` lifetime by cloning the content and URL. This is useful for storing the `HyperlinkedSpan` in a context where the original lifetime cannot be guaranteed.
+    pub fn make_static(self) -> HyperlinkedSpan<'static> {
+        HyperlinkedSpan {
+            style: self.style,
+            content: Cow::Owned(self.content.into_owned()),
+            url: self.url.map(|u| Cow::Owned(u.into_owned())),
         }
     }
 }
 
-impl UnicodeWidthStr for StyledHyperlink<'_> {
-    fn width(&self) -> usize {
-        self.hyperlink.text.width()
-    }
-
-    fn width_cjk(&self) -> usize {
-        self.hyperlink.text.width_cjk()
+impl<'a> From<ratatui_core::text::Span<'a>> for HyperlinkedSpan<'a> {
+    fn from(span: ratatui_core::text::Span<'a>) -> Self {
+        Self {
+            style: span.style,
+            content: span.content,
+            url: None,
+        }
     }
 }
 
 impl UnicodeWidthStr for HyperlinkedSpan<'_> {
     fn width(&self) -> usize {
-        match self {
-            HyperlinkedSpan::Span(span) => span.content.width(),
-            HyperlinkedSpan::Hyperlink(hyperlink) => hyperlink.hyperlink.text.width(),
-        }
+        self.content.width()
     }
 
     fn width_cjk(&self) -> usize {
-        match self {
-            HyperlinkedSpan::Span(span) => span.content.width_cjk(),
-            HyperlinkedSpan::Hyperlink(hyperlink) => hyperlink.hyperlink.text.width_cjk(),
-        }
+        self.content.width_cjk()
     }
 }
 
@@ -270,25 +172,23 @@ impl Widget for &HyperlinkedSpan<'_> {
         if area.is_empty() {
             return;
         }
-        match self {
-            HyperlinkedSpan::Span(span) => {
-                Widget::render(span, area, buf);
-            }
-            HyperlinkedSpan::Hyperlink(styled_hyperlink) => {
-                render_hyperlink(styled_hyperlink, area, buf);
-            }
+
+        if let Some(url) = &self.url {
+            render_hyperlink(&self.content, url, self.style, area, buf);
+        } else {
+            let span = ratatui_core::text::Span {
+                content: self.content.clone(),
+                style: self.style,
+            };
+            Widget::render(&span, area, buf);
         }
     }
 }
 
-pub(crate) fn render_hyperlink(hyperlink: &StyledHyperlink<'_>, area: Rect, buf: &mut Buffer) {
+pub(crate) fn render_hyperlink(text: &str, url: &str, style: Style, area: Rect, buf: &mut Buffer) {
     if area.is_empty() {
         return;
     }
-
-    let url = &hyperlink.hyperlink.url;
-    let text = &hyperlink.hyperlink.text;
-    let style = hyperlink.style;
 
     let label_width = text.width().min(area.width as usize);
     if label_width == 0 {
@@ -301,7 +201,7 @@ pub(crate) fn render_hyperlink(hyperlink: &StyledHyperlink<'_>, area: Rect, buf:
         let (truncated, _) = text.unicode_truncate(area.width as usize);
         truncated
     } else {
-        text.as_ref()
+        text
     };
 
     let encoded = encode_osc8(label, url);
