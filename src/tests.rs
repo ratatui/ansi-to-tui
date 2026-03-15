@@ -1,4 +1,4 @@
-use crate::{hyperlink::*, IntoText as _};
+use crate::{IntoText as _, hyperlink::*};
 use pretty_assertions::assert_eq;
 use ratatui_core::style::{Color, Style, Stylize};
 

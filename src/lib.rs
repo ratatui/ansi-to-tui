@@ -35,7 +35,7 @@
 //! # fn doctest() -> eyre::Result<()> {
 //! use ansi_to_tui::IntoText as _;
 //! let bytes = b"\x1b[38;2;225;192;203mAAAAA\x1b[0m".to_vec();
-//! let text = bytes.into_text()?;
+//! let text = bytes.to_text()?;
 //! # Ok(()) }
 //! ```
 //!
@@ -45,7 +45,7 @@
 //! # fn doctest() -> eyre::Result<()> {
 //! use ansi_to_tui::IntoText as _;
 //! let buffer = std::fs::read("ascii/text.ascii")?;
-//! let text = buffer.into_text()?;
+//! let text = buffer.to_text()?;
 //! # Ok(()) }
 //! ```
 //!
@@ -60,7 +60,8 @@ pub use error::Error;
 mod code;
 mod error;
 mod hyperlink;
-pub use hyperlink::{HyperlinkedLine, HyperlinkedSpan, HyperlinkedText};
+pub use hyperlink::{HyperlinkedLine, HyperlinkedParagraph, HyperlinkedSpan, HyperlinkedText};
+pub use ratatui_widgets::paragraph::Wrap;
 mod parser;
 #[cfg(test)]
 mod tests;
@@ -68,7 +69,7 @@ mod tests;
 /// Parse ANSI SGR styled bytes into a Ratatui [`HyperlinkedText`].
 ///
 /// This trait is implemented for all `T: AsRef<[u8]>`, so most byte containers can call
-/// either [`IntoText::into_text`]. or [`IntoText::to_text`]
+/// either [`IntoText::to_text`]. or [`IntoText::into_text`]
 ///
 /// For example, `String`, `&str`, `Vec<u8>`, and `&[u8]` all implement `AsRef<[u8]>`.
 ///

@@ -15,6 +15,7 @@ homepage = "https://ratatui.rs"
 [dependencies]
 nom = "8"
 ratatui-core = { version = "0.1.0", default-features = false }
+ratatui-widgets = { version = "0.3.0", default-features = false }
 simdutf8 = { version = "0.1", optional = true }
 smallvec = { version = "1", features = ["const_generics"] }
 thiserror = "2"

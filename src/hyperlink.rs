@@ -1,10 +1,12 @@
 mod line;
+mod paragraph;
 mod span;
 mod text;
 
 use std::borrow::Cow;
 
 pub use line::HyperlinkedLine;
+pub use paragraph::HyperlinkedParagraph;
 pub use span::HyperlinkedSpan;
 
 pub use text::HyperlinkedText;
