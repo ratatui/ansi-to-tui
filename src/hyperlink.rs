@@ -56,7 +56,7 @@ impl<'a, T: ?Sized + ToOwned + 'a> Hyperlink<'a, T> {
 
 impl<'a> Hyperlink<'a, [u8]> {
     #[cfg(not(feature = "simd"))]
-    pub fn parse(self) -> Result<Hyperlink<'a, str>, std::string::FromUtf8Error> {
+    pub fn parse(self) -> Result<Hyperlink<'a, str>, std::str::Utf8Error> {
         let text = match self.text {
             Cow::Borrowed(bytes) => Cow::Borrowed(std::str::from_utf8(bytes)?),
             Cow::Owned(bytes) => Cow::Owned(std::str::from_utf8(&bytes)?.to_owned()),
