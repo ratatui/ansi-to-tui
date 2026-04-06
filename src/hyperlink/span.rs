@@ -45,6 +45,7 @@ impl<'a> HyperlinkedSpan<'a> {
     }
 
     /// Create a new `HyperlinkedSpan` with the given text, URL, and style.
+    #[inline]
     pub fn styled_hyperlink<T, S>(text: T, url: T, style: S) -> Self
     where
         T: Into<Cow<'a, str>>,
@@ -82,6 +83,7 @@ impl<'a> HyperlinkedSpan<'a> {
     }
 
     /// Create a new `HyperlinkedSpan` with the given text and style, but no URL.
+    #[inline]
     pub fn styled<T, S>(content: T, style: S) -> Self
     where
         T: Into<Cow<'a, str>>,

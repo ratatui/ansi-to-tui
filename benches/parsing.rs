@@ -10,14 +10,14 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("Parsing bench", |b| {
         b.iter(|| {
             let s = black_box(&BASIC);
-            black_box(s.into_text()).unwrap();
+            black_box(s.to_text()).unwrap();
         })
     });
     const CODE: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/ascii/code.ascii"));
     c.bench_function("Parsing bench code", |b| {
         b.iter(|| {
             let s = black_box(&CODE);
-            black_box(s.into_text()).unwrap();
+            black_box(s.to_text()).unwrap();
         })
     });
 
@@ -28,7 +28,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("Parsing hyperlink code", |b| {
         b.iter(|| {
             let s = black_box(&HYPERLINK);
-            black_box(s.into_text()).unwrap();
+            black_box(s.to_text()).unwrap();
         })
     });
 }

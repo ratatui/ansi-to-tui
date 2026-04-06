@@ -154,17 +154,26 @@ fn span(
             last = last.patch(style);
         }
 
-        let text_span = text_parser.map(|v: &str| HyperlinkedSpan::styled(v, last));
+        let mut text_span = text_parser.map(|v: &str| HyperlinkedSpan::styled(v, last));
 
-        let hyperlink_span = hyperlink
+        let mut hyperlink_span = hyperlink
             .map_res(|v| v.parse())
             .map(|v| HyperlinkedSpan::styled_hyperlink(v.text, v.url, last));
 
-        let text_span = cond(style.is_none(), opt(any_escape_sequence))
-            .and(text_span)
-            .map(|(_, v)| v);
+        // let mut text_span = cond(style.is_none(), opt(any_escape_sequence))
+        //     .and(text_span)
+        //     .map(|(_, v)| v);
+        //
+        // hyperlink_span.or(text_span).parse(s) // ~21% over the if-else (more on larger files)
+        // // or
+        // alt((hyperlink_span, text_span)).parse(s) // ~5% over the if-else
 
-        hyperlink_span.or(text_span).parse(s)
+        if let Some((s, h)) = hyperlink_span.parse(s).ok() {
+            Ok((s, h))
+        } else {
+            let (s, _) = cond(style.is_none(), opt(any_escape_sequence)).parse(s)?;
+            text_span.parse(s)
+        }
     }
 }
 
