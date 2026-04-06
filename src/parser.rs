@@ -7,7 +7,7 @@ use nom::{
     branch::alt,
     bytes::complete::*,
     character::complete::*,
-    combinator::{map_res, opt},
+    combinator::{cond, map_res, opt},
     multi::*,
     sequence::{delimited, preceded},
 };
@@ -136,7 +136,7 @@ fn span(
 ) -> impl Fn(&[u8]) -> IResult<&[u8], HyperlinkedSpan<'_>, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], HyperlinkedSpan<'_>> {
         let mut last = last;
-        let (s, style) = opt(style(last)).parse(s)?;
+        let (s, style) = style(last).parse(s)?;
 
         #[cfg(feature = "simd")]
         let text_parser = map_res(
@@ -150,23 +150,21 @@ fn span(
             |t| std::str::from_utf8(t),
         );
 
-        if let Some(style) = style.flatten() {
+        if let Some(style) = style {
             last = last.patch(style);
         }
 
-        hyperlink
+        let text_span = text_parser.map(|v: &str| HyperlinkedSpan::styled(v, last));
+
+        let hyperlink_span = hyperlink
             .map_res(|v| v.parse())
-            .map(|v| HyperlinkedSpan {
-                style: last,
-                content: v.text,
-                url: Some(v.url),
-            })
-            .or(text_parser.map(|v| HyperlinkedSpan {
-                style: last,
-                content: v.into(),
-                url: None,
-            }))
-            .parse(s)
+            .map(|v| HyperlinkedSpan::styled_hyperlink(v.text, v.url, last));
+
+        let text_span = cond(style.is_none(), opt(any_escape_sequence))
+            .and(text_span)
+            .map(|(_, v)| v);
+
+        hyperlink_span.or(text_span).parse(s)
     }
 }
 
@@ -175,14 +173,7 @@ fn style(
     style: Style,
 ) -> impl Fn(&[u8]) -> IResult<&[u8], Option<Style>, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], Option<Style>> {
-        let (s, r) = match opt(ansi_sgr_code).parse(s)? {
-            (s, Some(r)) => (s, Some(r)),
-            (s, None) => {
-                let (s, _) = any_escape_sequence(s)?;
-                (s, None)
-            }
-        };
-        Ok((s, r.map(|r| Style::from(AnsiStates { style, items: r }))))
+        opt(ansi_sgr_code.map(|items| Style::from(AnsiStates { style, items }))).parse(s)
     }
 }
 
@@ -210,11 +201,6 @@ fn any_escape_sequence(s: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
     //
     // We should try to consume as much of it as possible to match behavior of most terminals;
     // where we fail at that we should at least consume the escape char to avoid infinitely looping
-    if hyperlink(s).is_ok() {
-        // This is a hack for now, we need to parse it at the span level but this removes it before
-        // that
-        return Ok((s, None));
-    }
 
     let (input, garbage) = preceded(
         char('\x1b'),
