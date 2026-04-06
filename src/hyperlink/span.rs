@@ -31,7 +31,7 @@ impl<'a> HyperlinkedSpan<'a> {
         self.style
     }
 
-    /// Set the style of the span, returning a new `HyperlinkedSpan` with the updated style.
+    /// Set the style of the span, returning a new [`HyperlinkedSpan`] with the updated style.
     pub fn set_style<S: Into<Style>>(self, style: S) -> Self {
         Self {
             style: style.into(),
@@ -44,7 +44,7 @@ impl<'a> HyperlinkedSpan<'a> {
         self.content.is_empty()
     }
 
-    /// Create a new `HyperlinkedSpan` with the given text, URL, and style.
+    /// Create a new [`HyperlinkedSpan`] with the given text, URL, and style.
     #[inline]
     pub fn styled_hyperlink<T, S>(text: T, url: T, style: S) -> Self
     where
@@ -58,7 +58,7 @@ impl<'a> HyperlinkedSpan<'a> {
         }
     }
 
-    /// Create a new `HyperlinkedSpan` with the given text and no style or URL
+    /// Create a new [`HyperlinkedSpan`] with the given text and no style or URL
     pub fn raw<T>(content: T) -> Self
     where
         T: Into<Cow<'a, str>>,
@@ -70,7 +70,7 @@ impl<'a> HyperlinkedSpan<'a> {
         }
     }
 
-    /// Create a new `HyperlinkedSpan` with the given text and URL, using the default style.
+    /// Create a new [`HyperlinkedSpan`] with the given text and URL, using the default style.
     pub fn hyperlink<T>(text: T, url: T) -> Self
     where
         T: Into<Cow<'a, str>>,
@@ -82,7 +82,7 @@ impl<'a> HyperlinkedSpan<'a> {
         }
     }
 
-    /// Create a new `HyperlinkedSpan` with the given text and style, but no URL.
+    /// Create a new [`HyperlinkedSpan`] with the given text and style, but no URL.
     #[inline]
     pub fn styled<T, S>(content: T, style: S) -> Self
     where
@@ -96,7 +96,7 @@ impl<'a> HyperlinkedSpan<'a> {
         }
     }
 
-    /// Set the URL of the span, returning a new `HyperlinkedSpan` with the updated URL.
+    /// Set the URL of the span, returning a new [`HyperlinkedSpan`] with the updated URL.
     pub fn link<U>(self, url: U) -> Self
     where
         U: Into<Cow<'a, str>>,
@@ -107,7 +107,7 @@ impl<'a> HyperlinkedSpan<'a> {
         }
     }
 
-    /// Map the content of the span using the provided function, returning a new `HyperlinkedSpan` with the updated content. The style and URL will be preserved.
+    /// Map the content of the span using the provided function, returning a new [`HyperlinkedSpan`] with the updated content. The style and URL will be preserved.
     pub fn map_content<F>(self, f: F) -> Self
     where
         F: FnOnce(Cow<'a, str>) -> Cow<'a, str>,
@@ -118,7 +118,7 @@ impl<'a> HyperlinkedSpan<'a> {
         }
     }
 
-    /// Create a new `HyperlinkedSpan` with the given content, preserving the style and URL of the original span.
+    /// Create a new [`HyperlinkedSpan`] with the given content, preserving the style and URL of the original span.
     pub fn with_content(&'a self, content: Cow<'a, str>) -> HyperlinkedSpan<'a> {
         Self {
             content,
@@ -132,12 +132,22 @@ impl<'a> HyperlinkedSpan<'a> {
         &self.content
     }
 
-    /// Convert the `HyperlinkedSpan` into a version with `'static` lifetime by cloning the content and URL. This is useful for storing the `HyperlinkedSpan` in a context where the original lifetime cannot be guaranteed.
+    /// Convert the [`HyperlinkedSpan`] into a version with `'static` lifetime by cloning the content and URL. This is useful for storing the [`HyperlinkedSpan`] in a context where the original lifetime cannot be guaranteed.
     pub fn make_static(self) -> HyperlinkedSpan<'static> {
         HyperlinkedSpan {
             style: self.style,
             content: Cow::Owned(self.content.into_owned()),
             url: self.url.map(|u| Cow::Owned(u.into_owned())),
+        }
+    }
+
+    /// Converts this [`HyperlinkedSpan`] into a [`ratatui_core::text::Span`].
+    ///
+    /// Note: Hyperlink information is lost during conversion.
+    pub fn into_ratatui_lossy(self) -> ratatui_core::text::Span<'a> {
+        ratatui_core::text::Span {
+            content: self.content,
+            style: self.style,
         }
     }
 }

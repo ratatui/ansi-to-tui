@@ -12,7 +12,7 @@ use unicode_width::UnicodeWidthStr;
 
 /// A line of text consisting of one or more [`HyperlinkedSpan`]s.
 ///
-/// This is the hyperlink-aware equivalent of [`HyperlinkedLine`]. Each span may be a
+/// This is the hyperlink-aware equivalent of [`ratatui_core::text::Line`]. Each span may be a
 /// plain styled span or a styled hyperlink. When rendered, hyperlinks produce OSC 8 escape
 /// sequences so that supporting terminals display clickable links.
 #[derive(Default, Clone, Eq, PartialEq, Hash, Debug)]
@@ -120,7 +120,7 @@ impl<'a> HyperlinkedLine<'a> {
         }
     }
 
-    /// Creates a new `HyperlinkedLine` from the given content, splitting it into spans by newlines.
+    /// Creates a new [`HyperlinkedLine`] from the given content, splitting it into spans by newlines.
     pub fn raw<T>(content: T) -> Self
     where
         T: Into<Cow<'a, str>>,
@@ -128,6 +128,21 @@ impl<'a> HyperlinkedLine<'a> {
         Self {
             spans: cow_to_spans(content),
             ..Default::default()
+        }
+    }
+
+    /// Converts this [`HyperlinkedLine`] into a [`ratatui_core::text::Line`].
+    ///
+    /// Note: Hyperlink information in spans is lost during conversion.
+    pub fn into_ratatui_lossy(self) -> ratatui_core::text::Line<'a> {
+        ratatui_core::text::Line {
+            spans: self
+                .spans
+                .into_iter()
+                .map(HyperlinkedSpan::into_ratatui_lossy)
+                .collect(),
+            style: self.style,
+            alignment: self.alignment,
         }
     }
 }
@@ -205,7 +220,7 @@ impl Widget for &HyperlinkedLine<'_> {
 
 impl HyperlinkedLine<'_> {
     /// An internal implementation method for `Widget::render` that allows the parent widget to
-    /// define a default alignment, to be used if `HyperlinkedLine::alignment` is `None`.
+    /// define a default alignment, to be used if [`HyperlinkedLine::alignment`] is `None`.
     pub(crate) fn render_with_alignment(
         &self,
         area: Rect,
@@ -281,7 +296,7 @@ fn render_spans(
 }
 
 /// Returns an iterator over the spans that lie after a given skip width from the start of the
-/// `HyperlinkedLine` (including a partially visible span if the `skip_width` lands within a span).
+/// [`HyperlinkedLine`] (including a partially visible span if the `skip_width` lands within a span).
 fn spans_after_width<'a>(
     spans: &'a [HyperlinkedSpan],
     mut skip_width: usize,
@@ -306,10 +321,10 @@ fn spans_after_width<'a>(
         })
         .map(|(span, span_width, available_width)| {
             if span_width <= available_width {
-                // HyperlinkedSpan is fully visible. Clone here is fast as the underlying content is `Cow`.
+                // [`HyperlinkedSpan`] is fully visible. Clone here is fast as the underlying content is `Cow`.
                 return (span.clone(), span_width, 0u16);
             }
-            // HyperlinkedSpan is only partially visible. As the end is truncated by the area width, only
+            // [`HyperlinkedSpan`] is only partially visible. As the end is truncated by the area width, only
             // truncate the start of the span.
             let (content, actual_width) = span.content().unicode_truncate_start(available_width);
 

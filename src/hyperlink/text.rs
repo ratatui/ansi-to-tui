@@ -12,7 +12,7 @@ use crate::hyperlink::{HyperlinkedSpan, line::HyperlinkedLine};
 
 /// A string split over one or more lines, where each line may contain hyperlinks.
 ///
-/// This is the hyperlink-aware equivalent of [`HyperlinkedText`]. When rendered,
+/// This is the hyperlink-aware equivalent of [`ratatui_core::text::Text`]. When rendered,
 /// hyperlinks produce OSC 8 escape sequences so that supporting terminals display clickable
 /// links.
 #[derive(Default, Clone, Eq, PartialEq, Hash, Debug)]
@@ -110,7 +110,7 @@ impl<'a> HyperlinkedText<'a> {
         }
     }
 
-    /// Creates a new `HyperlinkedText` from the given content, splitting it into lines on newline characters.
+    /// Creates a new [`HyperlinkedText`] from the given content, splitting it into lines on newline characters.
     pub fn raw<T>(content: T) -> Self
     where
         T: Into<Cow<'a, str>>,
@@ -125,6 +125,21 @@ impl<'a> HyperlinkedText<'a> {
                 .collect(),
         };
         Self::from(lines)
+    }
+
+    /// Converts this [`HyperlinkedText`] into a [`ratatui_core::text::Text`].
+    ///
+    /// Note: Hyperlink information is lost during conversion.
+    pub fn into_ratatui_lossy(self) -> ratatui_core::text::Text<'a> {
+        ratatui_core::text::Text {
+            lines: self
+                .lines
+                .into_iter()
+                .map(HyperlinkedLine::into_ratatui_lossy)
+                .collect(),
+            style: self.style,
+            alignment: self.alignment,
+        }
     }
 }
 

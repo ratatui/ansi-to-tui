@@ -188,7 +188,7 @@ impl<'a> HyperlinkedParagraph<'a> {
 
     /// Left-aligns the text in the given paragraph.
     ///
-    /// Convenience shortcut for `HyperlinkedParagraph::alignment(Alignment::Left)`.
+    /// Convenience shortcut for [`HyperlinkedParagraph::alignment`]\([`Alignment::Left`]\).
     #[must_use = "method moves the value of self and returns the modified value"]
     pub const fn left_aligned(self) -> Self {
         self.alignment(Alignment::Left)
@@ -196,7 +196,7 @@ impl<'a> HyperlinkedParagraph<'a> {
 
     /// Center-aligns the text in the given paragraph.
     ///
-    /// Convenience shortcut for `HyperlinkedParagraph::alignment(Alignment::Center)`.
+    /// Convenience shortcut for [`HyperlinkedParagraph::alignment`]\([`Alignment::Center`]\).
     #[must_use = "method moves the value of self and returns the modified value"]
     pub const fn centered(self) -> Self {
         self.alignment(Alignment::Center)
@@ -204,10 +204,28 @@ impl<'a> HyperlinkedParagraph<'a> {
 
     /// Right-aligns the text in the given paragraph.
     ///
-    /// Convenience shortcut for `HyperlinkedParagraph::alignment(Alignment::Right)`.
+    /// Convenience shortcut for [`HyperlinkedParagraph::alignment`]\([`Alignment::Right`]\).
     #[must_use = "method moves the value of self and returns the modified value"]
     pub const fn right_aligned(self) -> Self {
         self.alignment(Alignment::Right)
+    }
+
+    /// Converts this [`HyperlinkedParagraph`] into a [`ratatui_widgets::paragraph::Paragraph`].
+    ///
+    /// Note: Hyperlink information is lost during conversion.
+    pub fn into_ratatui_lossy(self) -> ratatui_widgets::paragraph::Paragraph<'a> {
+        let mut paragraph =
+            ratatui_widgets::paragraph::Paragraph::new(self.text.into_ratatui_lossy())
+                .alignment(self.alignment);
+        if let Some(block) = self.block {
+            paragraph = paragraph.block(block);
+        }
+        if let Some(wrap) = self.wrap {
+            paragraph = paragraph.wrap(wrap);
+        }
+        paragraph
+            .style(self.style)
+            .scroll((self.scroll.y, self.scroll.x))
     }
 }
 
