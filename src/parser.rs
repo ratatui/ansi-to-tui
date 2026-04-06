@@ -168,7 +168,7 @@ fn span(
         // // or
         // alt((hyperlink_span, text_span)).parse(s) // ~5% over the if-else
 
-        if let Some((s, h)) = hyperlink_span.parse(s).ok() {
+        if let Ok((s, h)) = hyperlink_span.parse(s) {
             Ok((s, h))
         } else {
             let (s, _) = cond(style.is_none(), opt(any_escape_sequence)).parse(s)?;
@@ -408,7 +408,7 @@ mod test_hyperlinks {
         assert!(
             line.spans[1]
                 .style()
-                .has_modifier(ratatui::style::Modifier::BOLD)
+                .has_modifier(ratatui_core::style::Modifier::BOLD)
         );
     }
 }

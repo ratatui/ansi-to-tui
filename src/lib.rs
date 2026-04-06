@@ -32,7 +32,7 @@
 //! The input type implements `AsRef<[u8]>`, so it is not consumed.
 //!
 //! ```rust
-//! # fn doctest() -> eyre::Result<()> {
+//! # fn doctest() -> anyhow::Result<()> {
 //! use ansi_to_tui::IntoText as _;
 //! let bytes = b"\x1b[38;2;225;192;203mAAAAA\x1b[0m".to_vec();
 //! let text = bytes.to_text()?;

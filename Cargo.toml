@@ -24,12 +24,9 @@ unicode-truncate = "2.0.1"
 unicode-width = "0.2.2"
 
 [dev-dependencies]
-anstyle = "1.0.13"
 anyhow = "1"
 criterion = "0.8"
-eyre = "0.6"
 pretty_assertions = "1.4"
-ratatui = "0.30.0"
 
 [features]
 simd = ["dep:simdutf8"]

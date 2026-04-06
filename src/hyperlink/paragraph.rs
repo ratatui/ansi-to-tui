@@ -236,9 +236,8 @@ impl HyperlinkedParagraph<'_> {
         buf.set_style(text_area, self.style);
 
         let lines_iter = self.text.lines.iter().skip(self.scroll.y as usize);
-        let mut y = 0u16;
 
-        for line in lines_iter {
+        for (y, line) in lines_iter.enumerate().map(|(i, v)| (i as u16, v)) {
             if y >= text_area.height {
                 break;
             }
@@ -249,7 +248,6 @@ impl HyperlinkedParagraph<'_> {
                 height: 1,
             };
             line.render_with_alignment(line_area, buf, Some(self.alignment));
-            y += 1;
         }
     }
 }

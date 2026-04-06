@@ -51,7 +51,7 @@
         craneLib = (crane.mkLib pkgs).overrideToolchain stableToolchain;
         craneLibLLvmTools = (crane.mkLib pkgs).overrideToolchain stableToolchainWithLLvmTools;
 
-        sourceFilters = path: type: (craneLib.filterCargoSources path type) || (lib.hasSuffix ".ascii" path);
+        sourceFilters = path: type: (craneLib.filterCargoSources path type) || (lib.hasSuffix ".ascii" path) || (lib.hasSuffix ".toml" path);
         src = lib.cleanSourceWith {
           filter = sourceFilters;
           src = ./.;
@@ -91,9 +91,9 @@
               src = pkgs.lib.sources.sourceFilesBySuffices src [".toml"];
             };
             # Audit dependencies
-            ansi-to-tui-audit = craneLib.cargoAudit {
-              inherit src advisory-db;
-            };
+            # ansi-to-tui-audit = craneLib.cargoAudit {
+            #   inherit src advisory-db;
+            # };
 
             # Audit licenses
             ansi-to-tui-deny = craneLib.cargoDeny {
@@ -121,6 +121,7 @@
               stableToolchainWithRustAnalyzer
               cargo-nextest
               cargo-deny
+              cargo-audit
               cargo-outdated
               cargo-semver-checks
             ];

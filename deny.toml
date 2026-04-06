@@ -70,8 +70,7 @@ feature-depth = 1
 # A list of advisory IDs to ignore. Note that ignored advisories will still
 # output a note when they are encountered.
 ignore = [
-  #"RUSTSEC-0000-0000",
-  #{ id = "RUSTSEC-0000-0000", reason = "you can specify a reason the advisory is ignored" },
+  # { id = "RUSTSEC-2026-0009", reason = "Only used in example and has been updated in master" },
   #"a-crate-that-is-yanked@0.1.1", # you can also ignore yanked crate versions if you wish
   #{ crate = "a-crate-that-is-yanked@0.1.1", reason = "you can specify why you are ignoring the yanked crate" },
 ]
@@ -196,8 +195,8 @@ deny = [
 skip = [
 
   #"ansi_term@0.11.0",
-  { crate = "itertools@0.13", reason = "Pulled in via ratatui-core -> unicode-truncate (and criterion dev-dep)" },
-  { crate = "itertools@0.14", reason = "Pulled in via ratatui-core direct dependency" },
+  # { crate = "itertools@0.13", reason = "Pulled in via ratatui-core -> unicode-truncate (and criterion dev-dep)" },
+  # { crate = "itertools@0.14", reason = "Pulled in via ratatui-core direct dependency" },
 ]
 # Similarly to `skip` allows you to skip certain crates during duplicate
 # detection. Unlike skip, it also includes the entire tree of transitive
