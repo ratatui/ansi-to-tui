@@ -42,7 +42,7 @@
 //! Parsing from a file.
 //!
 //! ```rust
-//! # fn doctest() -> eyre::Result<()> {
+//! # fn doctest() -> anyhow::Result<()> {
 //! use ansi_to_tui::IntoText as _;
 //! let buffer = std::fs::read("ascii/text.ascii")?;
 //! let text = buffer.to_text()?;
@@ -60,7 +60,10 @@ pub use error::Error;
 mod code;
 mod error;
 mod hyperlink;
-pub use hyperlink::{HyperlinkedLine, HyperlinkedParagraph, HyperlinkedSpan, HyperlinkedText};
+#[cfg(feature = "paragraph")]
+pub use hyperlink::HyperlinkedParagraph;
+pub use hyperlink::{HyperlinkedLine, HyperlinkedSpan, HyperlinkedText};
+#[cfg(feature = "paragraph")]
 pub use ratatui_widgets::paragraph::Wrap;
 mod parser;
 #[cfg(test)]

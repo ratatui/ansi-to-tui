@@ -1,4 +1,5 @@
 mod line;
+#[cfg(feature = "paragraph")]
 mod paragraph;
 mod span;
 mod text;
@@ -6,6 +7,7 @@ mod text;
 use std::borrow::Cow;
 
 pub use line::HyperlinkedLine;
+#[cfg(feature = "paragraph")]
 pub use paragraph::HyperlinkedParagraph;
 pub use span::HyperlinkedSpan;
 
