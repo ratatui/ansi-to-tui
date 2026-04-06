@@ -51,31 +51,21 @@
         craneLib = (crane.mkLib pkgs).overrideToolchain stableToolchain;
         craneLibLLvmTools = (crane.mkLib pkgs).overrideToolchain stableToolchainWithLLvmTools;
 
-        sourceFilters = path: type: (craneLib.filterCargoSources path type) || (lib.hasSuffix ".ascii" path) || (lib.hasSuffix ".toml" path);
+        sourceFilters = path: type: (craneLib.filterCargoSources path type) || (lib.hasSuffix ".ascii" path);
         src = lib.cleanSourceWith {
           filter = sourceFilters;
           src = ./.;
         };
-        commonArgs =
-          {
-            inherit src;
-            pname = "ansi-to-tui";
-            doCheck = false;
-            # LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
-            # nativeBuildInputs = with pkgs; [
-            #   cmake
-            #   llvmPackages.libclang.lib
-            # ];
-            buildInputs = with pkgs;
-              []
-              ++ (lib.optionals pkgs.stdenv.isDarwin [
-                libiconv
-                # darwin.apple_sdk.frameworks.Metal
-              ]);
-          }
-          // (lib.optionalAttrs pkgs.stdenv.isLinux {
-            # BINDGEN_EXTRA_CLANG_ARGS = "-I${pkgs.llvmPackages.libclang.lib}/lib/clang/18/include";
-          });
+        commonArgs = {
+          inherit src;
+          pname = "ansi-to-tui";
+          doCheck = false;
+          buildInputs = with pkgs;
+            []
+            ++ (lib.optionals pkgs.stdenv.isDarwin [
+              libiconv
+            ]);
+        };
         cargoArtifacts = craneLib.buildPackage commonArgs;
       in {
         checks =
@@ -91,9 +81,9 @@
               src = pkgs.lib.sources.sourceFilesBySuffices src [".toml"];
             };
             # Audit dependencies
-            # ansi-to-tui-audit = craneLib.cargoAudit {
-            #   inherit src advisory-db;
-            # };
+            ansi-to-tui-audit = craneLib.cargoAudit {
+              inherit src advisory-db;
+            };
 
             # Audit licenses
             ansi-to-tui-deny = craneLib.cargoDeny {

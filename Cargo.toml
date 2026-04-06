@@ -12,6 +12,9 @@ repository = "https://github.com/ratatui/ansi-to-tui"
 documentation = "https://docs.rs/ansi-to-tui"
 homepage = "https://ratatui.rs"
 
+[package.metadata.docs.rs]
+all-features = true
+
 [dependencies]
 nom = "8"
 ratatui-core = { version = "0.1.0", default-features = false }
