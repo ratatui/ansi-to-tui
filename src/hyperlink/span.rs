@@ -133,7 +133,7 @@ impl<'a> HyperlinkedSpan<'a> {
     }
 
     /// Convert the [`HyperlinkedSpan`] into a version with `'static` lifetime by cloning the content and URL. This is useful for storing the [`HyperlinkedSpan`] in a context where the original lifetime cannot be guaranteed.
-    pub fn make_static(self) -> HyperlinkedSpan<'static> {
+    pub fn into_owned(self) -> HyperlinkedSpan<'static> {
         HyperlinkedSpan {
             style: self.style,
             content: Cow::Owned(self.content.into_owned()),

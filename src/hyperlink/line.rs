@@ -108,14 +108,14 @@ impl<'a> HyperlinkedLine<'a> {
     }
 
     /// Adds a hyperlink span to the line with the given content and URL.
-    pub fn make_static(self) -> HyperlinkedLine<'static> {
+    pub fn into_owned(self) -> HyperlinkedLine<'static> {
         HyperlinkedLine {
             style: self.style,
             alignment: self.alignment,
             spans: self
                 .spans
                 .into_iter()
-                .map(|span| span.make_static())
+                .map(|span| span.into_owned())
                 .collect(),
         }
     }

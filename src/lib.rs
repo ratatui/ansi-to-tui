@@ -97,7 +97,7 @@ pub trait IntoText {
     /// This always returns a `HyperlinkedText<'static>`, so it allocates owned strings for the parsed spans.
     #[allow(clippy::wrong_self_convention)]
     fn into_text(&self) -> Result<HyperlinkedText<'static>, Error> {
-        self.to_text().map(|text| text.make_static())
+        self.to_text().map(|text| text.into_owned())
     }
 
     /// Convert the type to a borrowed `HyperlinkedText` while trying to copy as little as possible.
@@ -105,7 +105,7 @@ pub trait IntoText {
     /// This method borrows the span contents from the input instead of allocating new strings,
     /// so the returned `HyperlinkedText` is only valid as long as the input is alive.
     ///
-    /// You can convert it to HyperlinkedText<'static> by calling .make_static() on HyperlinkedText
+    /// You can convert it to HyperlinkedText<'static> by calling .into_owned() on HyperlinkedText
     ///
     /// Use this when you only need the parsed `HyperlinkedText` temporarily (for example, render it
     /// immediately). If you need to store the result beyond the lifetime of the input, use

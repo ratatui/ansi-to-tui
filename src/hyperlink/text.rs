@@ -99,12 +99,12 @@ impl<'a> HyperlinkedText<'a> {
     }
 
     /// Converts this text into one with a static lifetime, cloning all the lines in the process.
-    pub fn make_static(self) -> HyperlinkedText<'static> {
+    pub fn into_owned(self) -> HyperlinkedText<'static> {
         HyperlinkedText {
             lines: self
                 .lines
                 .into_iter()
-                .map(|line| line.make_static())
+                .map(|line| line.into_owned())
                 .collect(),
             ..self
         }
