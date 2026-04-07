@@ -1,14 +1,11 @@
-use crate::IntoText as _;
+use crate::{IntoText as _, hyperlink::*};
 use pretty_assertions::assert_eq;
-use ratatui_core::{
-    style::{Color, Style, Stylize},
-    text::{Line, Span, Text},
-};
+use ratatui_core::style::{Color, Style, Stylize};
 
 #[test]
 fn parses_plain_text_without_styles() {
     let string: Vec<u8> = "FOO".to_string().bytes().collect();
-    test_both(string, Text::raw("FOO"));
+    test_both(string, HyperlinkedText::raw("FOO"));
 }
 
 #[test]
@@ -16,22 +13,22 @@ fn parses_unicode_text() {
     // These are 8 byte unicode characters.
     // First 4 bytes are for the unicode and the last 4 bytes are for the color / variant.
     let bytes = "AAA🅱️🅱️🅱️".as_bytes().to_vec();
-    let output = Text::raw("AAA🅱️🅱️🅱️");
+    let output = HyperlinkedText::raw("AAA🅱️🅱️🅱️");
     test_both(bytes, output);
 }
 
 #[test]
 fn preserves_empty_lines_when_splitting_on_newlines() {
     let bytes = "LINE_1\n\n\n\n\n\n\nLINE_8".as_bytes().to_vec();
-    let output = Text::from(vec![
-        Line::from("LINE_1"),
-        Line::from(""),
-        Line::from(""),
-        Line::from(""),
-        Line::from(""),
-        Line::from(""),
-        Line::from(""),
-        Line::from("LINE_8"),
+    let output = HyperlinkedText::from(vec![
+        HyperlinkedLine::from("LINE_1"),
+        HyperlinkedLine::from(""),
+        HyperlinkedLine::from(""),
+        HyperlinkedLine::from(""),
+        HyperlinkedLine::from(""),
+        HyperlinkedLine::from(""),
+        HyperlinkedLine::from(""),
+        HyperlinkedLine::from("LINE_8"),
     ]);
 
     test_both(bytes, output);
@@ -40,14 +37,14 @@ fn preserves_empty_lines_when_splitting_on_newlines() {
 #[test]
 fn mixed_cr_and_lf_sequences_are_all_newlines() {
     let bytes = "A\r\n\rB\n\nC\r\r\nD".as_bytes().to_vec();
-    let output = Text::from(vec![
-        Line::from("A"),
-        Line::from(""),
-        Line::from("B"),
-        Line::from(""),
-        Line::from("C"),
-        Line::from(""),
-        Line::from("D"),
+    let output = HyperlinkedText::from(vec![
+        HyperlinkedLine::from("A"),
+        HyperlinkedLine::from(""),
+        HyperlinkedLine::from("B"),
+        HyperlinkedLine::from(""),
+        HyperlinkedLine::from("C"),
+        HyperlinkedLine::from(""),
+        HyperlinkedLine::from("D"),
     ]);
     test_both(bytes, output);
 }
@@ -55,13 +52,13 @@ fn mixed_cr_and_lf_sequences_are_all_newlines() {
 #[test]
 /// Treat `\r\n` as a single newline (CRLF).
 ///
-/// This normalizes Windows line endings so the resulting `Text` is stable across platforms.
+/// This normalizes Windows line endings so the resulting `HyperlinkedText` is stable across platforms.
 fn treats_crlf_as_single_newline() {
     let bytes = "LINE_1\r\nLINE_2\r\nLINE_3".as_bytes().to_vec();
-    let output = Text::from(vec![
-        Line::from("LINE_1"),
-        Line::from("LINE_2"),
-        Line::from("LINE_3"),
+    let output = HyperlinkedText::from(vec![
+        HyperlinkedLine::from("LINE_1"),
+        HyperlinkedLine::from("LINE_2"),
+        HyperlinkedLine::from("LINE_3"),
     ]);
     test_both(bytes, output);
 }
@@ -73,7 +70,10 @@ fn treats_crlf_as_single_newline() {
 /// CRLF inputs.
 fn treats_bare_cr_as_newline() {
     let bytes = "ABC\rDEF".as_bytes().to_vec();
-    let output = Text::from(vec![Line::from("ABC"), Line::from("DEF")]);
+    let output = HyperlinkedText::from(vec![
+        HyperlinkedLine::from("ABC"),
+        HyperlinkedLine::from("DEF"),
+    ]);
     test_both(bytes, output);
 }
 
@@ -81,12 +81,12 @@ fn treats_bare_cr_as_newline() {
 /// Normalize mixed LF and CRLF into consistent line boundaries.
 fn mixed_lf_and_crlf_line_endings_are_normalized() {
     let bytes = "A\nB\r\nC\nD\r\nE".as_bytes().to_vec();
-    let output = Text::from(vec![
-        Line::from("A"),
-        Line::from("B"),
-        Line::from("C"),
-        Line::from("D"),
-        Line::from("E"),
+    let output = HyperlinkedText::from(vec![
+        HyperlinkedLine::from("A"),
+        HyperlinkedLine::from("B"),
+        HyperlinkedLine::from("C"),
+        HyperlinkedLine::from("D"),
+        HyperlinkedLine::from("E"),
     ]);
     test_both(bytes, output);
 }
@@ -95,7 +95,7 @@ fn mixed_lf_and_crlf_line_endings_are_normalized() {
 /// A CRLF-only input is a single empty line.
 fn crlf_only_input_is_empty_line() {
     let bytes = "\r\n".as_bytes().to_vec();
-    let output = Text::raw("");
+    let output = HyperlinkedText::raw("");
     test_both(bytes, output);
 }
 
@@ -106,7 +106,10 @@ fn crlf_only_input_is_empty_line() {
 /// styled text lines.
 fn cr_before_non_sgr_escape_sequence_starts_new_line() {
     let bytes: Vec<u8> = b"\r\x1b[KOVERWRITE".to_vec();
-    let output = Text::from(vec![Line::from(""), Line::from("OVERWRITE")]);
+    let output = HyperlinkedText::from(vec![
+        HyperlinkedLine::from(""),
+        HyperlinkedLine::from("OVERWRITE"),
+    ]);
     test_both(bytes, output);
 }
 
@@ -114,9 +117,9 @@ fn cr_before_non_sgr_escape_sequence_starts_new_line() {
 /// CRLF ends the line and style continues on the next line.
 fn crlf_splits_lines_and_carries_style_across_lines() {
     let bytes: Vec<u8> = b"A\x1b[31mB\r\nC".to_vec();
-    let output = Text::from(vec![
-        Line::from(vec![Span::raw("A"), "B".red()]),
-        Line::from("C".red()),
+    let output = HyperlinkedText::from(vec![
+        HyperlinkedLine::from(vec![HyperlinkedSpan::raw("A"), "B".red().into()]),
+        HyperlinkedLine::from("C".red()),
     ]);
     test_both(bytes, output);
 }
@@ -124,21 +127,21 @@ fn crlf_splits_lines_and_carries_style_across_lines() {
 #[test]
 fn ignores_truncated_escape_sequence() {
     let bytes = b"\x1b[";
-    let output = Text::raw("");
+    let output = HyperlinkedText::raw("");
     test_both(bytes, output);
 }
 
 #[test]
 fn ignores_garbage_escape_sequences() {
     let bytes: Vec<u8> = b"\x1b\x1b[0\x1b[m\x1b".to_vec();
-    let output = Text::raw("");
+    let output = HyperlinkedText::raw("");
     test_both(bytes, output);
 }
 
 #[test]
 fn ignores_non_sgr_escape_sequences() {
     let bytes: Vec<u8> = b"\x1b[?25hAAABBB".to_vec();
-    let output = Text::raw("AAABBB");
+    let output = HyperlinkedText::raw("AAABBB");
     test_both(bytes, output);
 }
 
@@ -146,23 +149,26 @@ fn ignores_non_sgr_escape_sequences() {
 fn ignores_osc_and_other_non_sgr_sequences() {
     // Malformed -> malformed -> empty
     let bytes = b"\x1b[4 q\x1b]12;#fab1ed\x07";
-    let output = Text::raw("");
+    let output = HyperlinkedText::raw("");
     test_both(bytes, output);
 }
 
 #[test]
 fn unknown_sgr_codes_are_ignored_and_chained_items_still_apply() {
     let bytes: Vec<u8> = b"\x1b[200;31mred".to_vec();
-    let output = Text::from("red".red());
+    let output = HyperlinkedText::from("red".red());
     test_both(bytes, output);
 }
 
 #[test]
 fn empty_sgr_sequence_is_treated_as_reset() {
     let string = b"\x1b[32mGREEN\x1b[mFOO\nFOO";
-    let output = Text::from(vec![
-        Line::from(vec!["GREEN".green(), Span::styled("FOO", Style::reset())]),
-        Line::from(Span::styled("FOO", Style::reset())),
+    let output = HyperlinkedText::from(vec![
+        HyperlinkedLine::from(vec![
+            "GREEN".green().into(),
+            HyperlinkedSpan::styled("FOO", Style::reset()),
+        ]),
+        HyperlinkedLine::from(HyperlinkedSpan::styled("FOO", Style::reset())),
     ]);
     test_both(string, output);
 }
@@ -170,7 +176,7 @@ fn empty_sgr_sequence_is_treated_as_reset() {
 #[test]
 fn chained_sgr_items_in_single_escape_sequence_are_applied_in_order() {
     let bytes: Vec<u8> = b"\x1b[31;44;1mX".to_vec();
-    let output = Text::from("X".red().on_blue().bold());
+    let output = HyperlinkedText::from("X".red().on_blue().bold());
     test_both(bytes, output);
 }
 
@@ -178,9 +184,9 @@ fn chained_sgr_items_in_single_escape_sequence_are_applied_in_order() {
 fn does_not_emit_empty_spans_for_style_only_changes() {
     // Yellow -> Red -> Green -> "Hello" -> Reset -> "World"
     let bytes: Vec<u8> = b"\x1b[33m\x1b[31m\x1b[32mHello\x1b[0mWorld".to_vec();
-    let output = Text::from(Line::from(vec![
-        "Hello".green(),
-        Span::styled("World", Style::reset()),
+    let output = HyperlinkedText::from(HyperlinkedLine::from(vec![
+        "Hello".green().into(),
+        HyperlinkedSpan::styled("World", Style::reset()),
     ]));
     test_both(bytes, output);
 }
@@ -188,9 +194,9 @@ fn does_not_emit_empty_spans_for_style_only_changes() {
 #[test]
 fn sgr_0_resets_style() {
     let string = "\x1b[33mA\x1b[0mB";
-    let output = Text::from(Line::from(vec![
-        "A".yellow(),
-        Span::styled("B", Style::reset()),
+    let output = HyperlinkedText::from(HyperlinkedLine::from(vec![
+        "A".yellow().into(),
+        HyperlinkedSpan::styled("B", Style::reset()),
     ]));
     test_both(string, output);
 }
@@ -198,10 +204,10 @@ fn sgr_0_resets_style() {
 #[test]
 fn sgr_1_and_22_toggle_bold() {
     let bytes = "not, \x1b[1mbold\x1b[22m, not anymore".as_bytes().to_vec();
-    let output = Text::from(Line::from(vec![
-        Span::raw("not, "),
-        "bold".bold(),
-        ", not anymore".not_bold().not_dim(),
+    let output = HyperlinkedText::from(HyperlinkedLine::from(vec![
+        HyperlinkedSpan::raw("not, "),
+        "bold".bold().into(),
+        ", not anymore".not_bold().not_dim().into(),
     ]));
     test_both(bytes, output);
 }
@@ -209,10 +215,10 @@ fn sgr_1_and_22_toggle_bold() {
 #[test]
 fn sgr_2_and_22_toggle_faint() {
     let bytes = "not, \x1b[2mfaint\x1b[22m, not anymore".as_bytes().to_vec();
-    let output = Text::from(Line::from(vec![
-        Span::raw("not, "),
-        "faint".dim(),
-        ", not anymore".not_bold().not_dim(),
+    let output = HyperlinkedText::from(HyperlinkedLine::from(vec![
+        HyperlinkedSpan::raw("not, "),
+        "faint".dim().into(),
+        ", not anymore".not_bold().not_dim().into(),
     ]));
     test_both(bytes, output);
 }
@@ -222,10 +228,10 @@ fn sgr_3_and_23_toggle_italic() {
     let bytes = "not, \x1b[3mitalic\x1b[23m, not anymore"
         .as_bytes()
         .to_vec();
-    let output = Text::from(Line::from(vec![
-        Span::raw("not, "),
-        "italic".italic(),
-        ", not anymore".not_italic(),
+    let output = HyperlinkedText::from(HyperlinkedLine::from(vec![
+        HyperlinkedSpan::raw("not, "),
+        "italic".italic().into(),
+        ", not anymore".not_italic().into(),
     ]));
     test_both(bytes, output);
 }
@@ -235,10 +241,10 @@ fn sgr_4_and_24_toggle_underline() {
     let bytes = "not, \x1b[4munderlined\x1b[24m, not anymore"
         .as_bytes()
         .to_vec();
-    let output = Text::from(Line::from(vec![
-        Span::raw("not, "),
-        "underlined".underlined(),
-        ", not anymore".not_underlined(),
+    let output = HyperlinkedText::from(HyperlinkedLine::from(vec![
+        HyperlinkedSpan::raw("not, "),
+        "underlined".underlined().into(),
+        ", not anymore".not_underlined().into(),
     ]));
     test_both(bytes, output);
 }
@@ -248,10 +254,10 @@ fn sgr_5_and_25_toggle_slow_blink() {
     let bytes = "not, \x1b[5mblinking\x1b[25m, not anymore"
         .as_bytes()
         .to_vec();
-    let output = Text::from(Line::from(vec![
-        Span::raw("not, "),
-        "blinking".slow_blink(),
-        ", not anymore".not_slow_blink().not_rapid_blink(),
+    let output = HyperlinkedText::from(HyperlinkedLine::from(vec![
+        HyperlinkedSpan::raw("not, "),
+        "blinking".slow_blink().into(),
+        ", not anymore".not_slow_blink().not_rapid_blink().into(),
     ]));
     test_both(bytes, output);
 }
@@ -259,10 +265,10 @@ fn sgr_5_and_25_toggle_slow_blink() {
 #[test]
 fn sgr_6_and_25_toggle_rapid_blink() {
     let bytes = "not, \x1b[6mrapid\x1b[25m, not anymore".as_bytes().to_vec();
-    let output = Text::from(Line::from(vec![
-        Span::raw("not, "),
-        "rapid".rapid_blink(),
-        ", not anymore".not_slow_blink().not_rapid_blink(),
+    let output = HyperlinkedText::from(HyperlinkedLine::from(vec![
+        HyperlinkedSpan::raw("not, "),
+        "rapid".rapid_blink().into(),
+        ", not anymore".not_slow_blink().not_rapid_blink().into(),
     ]));
     test_both(bytes, output);
 }
@@ -272,10 +278,10 @@ fn sgr_7_and_27_toggle_reverse_video() {
     let bytes = "not, \x1b[7mreversed\x1b[27m, not anymore"
         .as_bytes()
         .to_vec();
-    let output = Text::from(Line::from(vec![
-        Span::raw("not, "),
-        "reversed".reversed(),
-        ", not anymore".not_reversed(),
+    let output = HyperlinkedText::from(HyperlinkedLine::from(vec![
+        HyperlinkedSpan::raw("not, "),
+        "reversed".reversed().into(),
+        ", not anymore".not_reversed().into(),
     ]));
     test_both(bytes, output);
 }
@@ -285,10 +291,10 @@ fn sgr_8_and_28_toggle_conceal() {
     let bytes = "not, \x1b[8mconcealed\x1b[28m, not anymore"
         .as_bytes()
         .to_vec();
-    let output = Text::from(Line::from(vec![
-        Span::raw("not, "),
-        "concealed".hidden(),
-        ", not anymore".not_hidden(),
+    let output = HyperlinkedText::from(HyperlinkedLine::from(vec![
+        HyperlinkedSpan::raw("not, "),
+        "concealed".hidden().into(),
+        ", not anymore".not_hidden().into(),
     ]));
     test_both(bytes, output);
 }
@@ -298,10 +304,10 @@ fn sgr_9_and_29_toggle_crossed_out() {
     let bytes = "not, \x1b[9mcrossed\x1b[29m, not anymore"
         .as_bytes()
         .to_vec();
-    let output = Text::from(Line::from(vec![
-        Span::raw("not, "),
-        "crossed".crossed_out(),
-        ", not anymore".not_crossed_out(),
+    let output = HyperlinkedText::from(HyperlinkedLine::from(vec![
+        HyperlinkedSpan::raw("not, "),
+        "crossed".crossed_out().into(),
+        ", not anymore".not_crossed_out().into(),
     ]));
     test_both(bytes, output);
 }
@@ -346,23 +352,23 @@ fn parses_4bit_named_colors_and_backgrounds() {
     )
     .into_bytes();
 
-    let output = Text::from(vec![
-        Line::from("black".black()),
-        Line::from("red".red()),
-        Line::from("green".green()),
-        Line::from("yellow".yellow()),
-        Line::from("blue".blue()),
-        Line::from("magenta".magenta()),
-        Line::from("cyan".cyan()),
-        Line::from("gray".gray()),
-        Line::from("black-bg".black().on_black()),
-        Line::from("red-bg".black().on_red()),
-        Line::from("green-bg".black().on_green()),
-        Line::from("yellow-bg".black().on_yellow()),
-        Line::from("blue-bg".black().on_blue()),
-        Line::from("magenta-bg".black().on_magenta()),
-        Line::from("cyan-bg".black().on_cyan()),
-        Line::from("gray-bg".black().on_gray()),
+    let output = HyperlinkedText::from(vec![
+        HyperlinkedLine::from("black".black()),
+        HyperlinkedLine::from("red".red()),
+        HyperlinkedLine::from("green".green()),
+        HyperlinkedLine::from("yellow".yellow()),
+        HyperlinkedLine::from("blue".blue()),
+        HyperlinkedLine::from("magenta".magenta()),
+        HyperlinkedLine::from("cyan".cyan()),
+        HyperlinkedLine::from("gray".gray()),
+        HyperlinkedLine::from("black-bg".black().on_black()),
+        HyperlinkedLine::from("red-bg".black().on_red()),
+        HyperlinkedLine::from("green-bg".black().on_green()),
+        HyperlinkedLine::from("yellow-bg".black().on_yellow()),
+        HyperlinkedLine::from("blue-bg".black().on_blue()),
+        HyperlinkedLine::from("magenta-bg".black().on_magenta()),
+        HyperlinkedLine::from("cyan-bg".black().on_cyan()),
+        HyperlinkedLine::from("gray-bg".black().on_gray()),
     ]);
 
     test_both(bytes, output);
@@ -408,23 +414,23 @@ fn parses_4bit_bright_colors_and_backgrounds() {
     )
     .into_bytes();
 
-    let output = Text::from(vec![
-        Line::from("dark-gray".dark_gray()),
-        Line::from("light-red".light_red()),
-        Line::from("light-green".light_green()),
-        Line::from("light-yellow".light_yellow()),
-        Line::from("light-blue".light_blue()),
-        Line::from("light-magenta".light_magenta()),
-        Line::from("light-cyan".light_cyan()),
-        Line::from("white".white()),
-        Line::from("dark-gray-bg".black().on_dark_gray()),
-        Line::from("light-red-bg".black().on_light_red()),
-        Line::from("light-green-bg".black().on_light_green()),
-        Line::from("light-yellow-bg".black().on_light_yellow()),
-        Line::from("light-blue-bg".black().on_light_blue()),
-        Line::from("light-magenta-bg".black().on_light_magenta()),
-        Line::from("light-cyan-bg".black().on_light_cyan()),
-        Line::from("white-bg".black().on_white()),
+    let output = HyperlinkedText::from(vec![
+        HyperlinkedLine::from("dark-gray".dark_gray()),
+        HyperlinkedLine::from("light-red".light_red()),
+        HyperlinkedLine::from("light-green".light_green()),
+        HyperlinkedLine::from("light-yellow".light_yellow()),
+        HyperlinkedLine::from("light-blue".light_blue()),
+        HyperlinkedLine::from("light-magenta".light_magenta()),
+        HyperlinkedLine::from("light-cyan".light_cyan()),
+        HyperlinkedLine::from("white".white()),
+        HyperlinkedLine::from("dark-gray-bg".black().on_dark_gray()),
+        HyperlinkedLine::from("light-red-bg".black().on_light_red()),
+        HyperlinkedLine::from("light-green-bg".black().on_light_green()),
+        HyperlinkedLine::from("light-yellow-bg".black().on_light_yellow()),
+        HyperlinkedLine::from("light-blue-bg".black().on_light_blue()),
+        HyperlinkedLine::from("light-magenta-bg".black().on_light_magenta()),
+        HyperlinkedLine::from("light-cyan-bg".black().on_light_cyan()),
+        HyperlinkedLine::from("white-bg".black().on_white()),
     ]);
 
     test_both(bytes, output);
@@ -433,7 +439,7 @@ fn parses_4bit_bright_colors_and_backgrounds() {
 #[test]
 fn sgr_31_and_39_toggle_foreground_color() {
     let bytes: Vec<u8> = b"\x1b[31;1mred\x1b[39mdefault".to_vec();
-    let output = Text::from(Line::from(vec![
+    let output = HyperlinkedText::from(HyperlinkedLine::from(vec![
         "red".red().bold(),
         "default".bold().fg(Color::Reset),
     ]));
@@ -443,7 +449,7 @@ fn sgr_31_and_39_toggle_foreground_color() {
 #[test]
 fn sgr_44_and_49_toggle_background_color() {
     let bytes: Vec<u8> = b"\x1b[44;1mblue-bg\x1b[49mdefault".to_vec();
-    let output = Text::from(Line::from(vec![
+    let output = HyperlinkedText::from(HyperlinkedLine::from(vec![
         "blue-bg".on_blue().bold(),
         "default".bold().bg(Color::Reset),
     ]));
@@ -454,7 +460,7 @@ fn sgr_44_and_49_toggle_background_color() {
 fn parses_256color_foreground_palette() {
     for i in 0..256 {
         let bytes = format!("\x1b[38;5;{}mHELLO", i).as_bytes().to_vec();
-        let output = Text::from("HELLO".fg(Color::Indexed(i as u8)));
+        let output = HyperlinkedText::from("HELLO".fg(Color::Indexed(i as u8)));
         test_both(bytes, output);
     }
 }
@@ -463,7 +469,7 @@ fn parses_256color_foreground_palette() {
 fn parses_256color_background_palette() {
     for i in 0..256 {
         let bytes = format!("\x1b[48;5;{}mHELLO", i).as_bytes().to_vec();
-        let output = Text::from("HELLO".bg(Color::Indexed(i as u8)));
+        let output = HyperlinkedText::from("HELLO".bg(Color::Indexed(i as u8)));
         test_both(bytes, output);
     }
 }
@@ -471,7 +477,7 @@ fn parses_256color_background_palette() {
 #[test]
 fn parses_truecolor_foreground() {
     let bytes: Vec<u8> = b"\x1b[38;2;100;100;100mAAABBB".to_vec();
-    let output = Text::from("AAABBB".fg(Color::Rgb(100, 100, 100)));
+    let output = HyperlinkedText::from("AAABBB".fg(Color::Rgb(100, 100, 100)));
     test_both(bytes, output);
 }
 
@@ -487,7 +493,7 @@ fn parses_truecolor_foreground_and_background() {
         let bytes = format!("\x1b[38;2;{fr};{fg};{fb};48;2;{br};{bg};{bb}mHELLO")
             .as_bytes()
             .to_vec();
-        let output = Text::from(
+        let output = HyperlinkedText::from(
             "HELLO"
                 .fg(Color::Rgb(fr, fg, fb))
                 .bg(Color::Rgb(br, bg, bb)),
@@ -504,18 +510,18 @@ fn carries_style_across_lines_and_handles_resets() {
             Build profile: -w ghc-9.0.2 -O1\n",
     )
     .into_bytes();
-    let output = Text::from(vec![
-        Line::from(vec![
-            "* ".green(),
-            Span::styled("Running before-startup command ", Style::reset()),
-            Span::styled("command", Style::reset()).bold(),
-            Span::styled("=make my-simple-package.cabal", Style::reset()),
+    let output = HyperlinkedText::from(vec![
+        HyperlinkedLine::from(vec![
+            "* ".green().into(),
+            HyperlinkedSpan::styled("Running before-startup command ", Style::reset()),
+            HyperlinkedSpan::styled("command", Style::reset()).bold(),
+            HyperlinkedSpan::styled("=make my-simple-package.cabal", Style::reset()),
         ]),
-        Line::from(vec![
-            Span::styled("* ", Style::reset()).green(),
-            Span::styled("$ make my-simple-package.cabal", Style::reset()),
+        HyperlinkedLine::from(vec![
+            HyperlinkedSpan::styled("* ", Style::reset()).green(),
+            HyperlinkedSpan::styled("$ make my-simple-package.cabal", Style::reset()),
         ]),
-        Line::from(vec![Span::styled(
+        HyperlinkedLine::from(vec![HyperlinkedSpan::styled(
             "Build profile: -w ghc-9.0.2 -O1",
             Style::reset(),
         )]),
@@ -523,26 +529,27 @@ fn carries_style_across_lines_and_handles_resets() {
     test_both(bytes, output);
 }
 
+fn encode_osc8(label: &str, url: &str) -> String {
+    format!("\u{1b}]8;;{url}\u{1b}\\{label}\u{1b}]8;;\u{1b}\\")
+}
+
+#[test]
+fn integration_test_hyperlinks() {
+    use crate::hyperlink::*;
+    let bytes = encode_osc8("Google", "https://www.google.com");
+    let text = bytes.into_text().expect("Failed to parse hyperlink text");
+    let expected = HyperlinkedText::from(vec![HyperlinkedLine::from(vec![
+        HyperlinkedSpan::hyperlink("Google", "https://www.google.com"),
+    ])]);
+    assert_eq!(text, expected);
+}
+
 #[track_caller]
-fn test_both(bytes: impl AsRef<[u8]>, other: Text) {
+fn test_both(bytes: impl AsRef<[u8]>, other: HyperlinkedText) {
     let bytes = bytes.as_ref();
-
-    #[cfg(feature = "zero-copy")]
-    let zero_copy = bytes.to_text().unwrap();
-
     let owned = bytes.into_text().unwrap();
-
-    #[cfg(feature = "zero-copy")]
-    assert_eq!(
-        zero_copy, owned,
-        "zero-copy and owned version of the methods have diverged; this is a bug in the library"
-    );
-
     assert_eq!(
         owned, other,
         "owned and other have diverged; this might be a bug in the library or a ratatui update"
     );
-
-    #[cfg(feature = "zero-copy")]
-    assert_eq!(zero_copy, other);
 }

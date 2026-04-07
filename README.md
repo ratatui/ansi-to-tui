@@ -24,7 +24,7 @@ having to pre-clean it.
 ```rust
 use ansi_to_tui::IntoText as _;
 let buffer = std::fs::read("ascii/text.ascii")?;
-let output = buffer.into_text()?;
+let output = buffer.to_text()?;
 ```
 
 Contributing and CI details are in [`CONTRIBUTING.md`][Contributing].

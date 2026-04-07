@@ -1,6 +1,6 @@
 [package]
 name = "ansi-to-tui"
-version = "8.0.1"
+version = "9.0.0-rc.1"
 authors = ["Uttarayan Mondal <email@uttarayan.me>"]
 edition = "2024"
 rust-version = "1.86"
@@ -12,23 +12,29 @@ repository = "https://github.com/ratatui/ansi-to-tui"
 documentation = "https://docs.rs/ansi-to-tui"
 homepage = "https://ratatui.rs"
 
+[package.metadata.docs.rs]
+all-features = true
+
 [dependencies]
 nom = "8"
 ratatui-core = { version = "0.1.0", default-features = false }
+ratatui-widgets = { version = "0.3.0", default-features = false, optional = true }
 simdutf8 = { version = "0.1", optional = true }
 smallvec = { version = "1", features = ["const_generics"] }
 thiserror = "2"
+unicode-segmentation = "1.12.0"
+unicode-truncate = "2.0.1"
+unicode-width = "0.2.2"
 
 [dev-dependencies]
 anyhow = "1"
 criterion = "0.8"
-eyre = "0.6"
 pretty_assertions = "1.4"
 
 [features]
 simd = ["dep:simdutf8"]
-zero-copy = []
-default = ["zero-copy", "simd"]
+default = ["simd"]
+paragraph = ["dep:ratatui-widgets"]
 
 
 [[bench]]

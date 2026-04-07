@@ -1,13 +1,14 @@
 #![allow(unused_imports)]
 #![warn(missing_docs)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
-//! Convert ANSI color and style codes into Ratatui [`Text`][Text].
+//! Convert ANSI color and style codes into Ratatui [`HyperlinkedText`][HyperlinkedText].
 //!
-//! This crate parses bytes containing ANSI SGR escape sequences (like `\x1b[31m`).
-//! It produces a Ratatui [`Text`][Text] with equivalent foreground/background [`Color`][Color] and
-//! [`Modifier`][Modifier] settings via [`Style`][Style].
+//! This crate parses bytes containing ANSI SGR escape sequences (like `\x1b[31m`).  
+//! It produces a Ratatui [`HyperlinkedText`][HyperlinkedText] with equivalent foreground/background [`Color`][Color] and
+//! [`Modifier`][Modifier] settings via [`Style`][Style], with support for OSC 8 hyperlinks.  
 //!
-//! Unknown or malformed escape sequences are ignored, so you can feed it real terminal output
+//! Unknown or malformed escape sequences are ignored, so you can feed it real terminal output  
 //! without having to pre-clean it.
 //!
 //! # Features
@@ -15,7 +16,6 @@
 //! - UTF-8 decoding via `String::from_utf8` (default) or [`simdutf8`][simdutf8] (`simd` feature).
 //! - SGR styles such as bold, italic, underline, and strikethrough.
 //! - Colors: named (3/4-bit, 8/16-color), indexed (8-bit, 256-color), and truecolor (24-bit RGB).
-//! - Optional `zero-copy` API that borrows from the input.
 //!
 //! # Supported Color Codes
 //!
@@ -33,43 +33,47 @@
 //! The input type implements `AsRef<[u8]>`, so it is not consumed.
 //!
 //! ```rust
-//! # fn doctest() -> eyre::Result<()> {
+//! # fn doctest() -> anyhow::Result<()> {
 //! use ansi_to_tui::IntoText as _;
 //! let bytes = b"\x1b[38;2;225;192;203mAAAAA\x1b[0m".to_vec();
-//! let text = bytes.into_text()?;
+//! let text = bytes.to_text()?;
 //! # Ok(()) }
 //! ```
 //!
 //! Parsing from a file.
 //!
 //! ```rust
-//! # fn doctest() -> eyre::Result<()> {
+//! # fn doctest() -> anyhow::Result<()> {
 //! use ansi_to_tui::IntoText as _;
 //! let buffer = std::fs::read("ascii/text.ascii")?;
-//! let text = buffer.into_text()?;
+//! let text = buffer.to_text()?;
 //! # Ok(()) }
 //! ```
 //!
-//! [Text]: https://docs.rs/ratatui-core/latest/ratatui_core/text/struct.Text.html
+//! [HyperlinkedText]: struct.HyperlinkedText.html
 //! [Color]: https://docs.rs/ratatui-core/latest/ratatui_core/style/enum.Color.html
 //! [Style]: https://docs.rs/ratatui-core/latest/ratatui_core/style/struct.Style.html
 //! [Modifier]: https://docs.rs/ratatui-core/latest/ratatui_core/style/struct.Modifier.html
 //! [simdutf8]: https://github.com/rusticstuff/simdutf8
 
 pub use error::Error;
-use ratatui_core::text::Text;
 
 mod code;
 mod error;
+mod hyperlink;
+#[cfg(feature = "paragraph")]
+pub use hyperlink::HyperlinkedParagraph;
+pub use hyperlink::{HyperlinkedLine, HyperlinkedSpan, HyperlinkedText};
+#[cfg(feature = "paragraph")]
+pub use ratatui_widgets::paragraph::Wrap;
 mod parser;
 #[cfg(test)]
 mod tests;
 
-/// Parse ANSI SGR styled bytes into a Ratatui [`Text`].
+/// Parse ANSI SGR styled bytes into a Ratatui [`HyperlinkedText`].
 ///
 /// This trait is implemented for all `T: AsRef<[u8]>`, so most byte containers can call
-/// [`IntoText::into_text`]. With the `zero-copy` feature enabled, you can also call
-/// [`IntoText::to_text`].
+/// either [`IntoText::to_text`]. or [`IntoText::into_text`]
 ///
 /// For example, `String`, `&str`, `Vec<u8>`, and `&[u8]` all implement `AsRef<[u8]>`.
 ///
@@ -88,25 +92,28 @@ mod tests;
 /// # Ok::<(), ansi_to_tui::Error>(())
 /// ```
 pub trait IntoText {
-    /// Convert the type to an owned `Text`.
+    /// Convert the type to an owned `HyperlinkedText`.
     ///
-    /// This always returns a `Text<'static>`, so it allocates owned strings for the parsed spans.
+    /// This always returns a `HyperlinkedText<'static>`, so it allocates owned strings for the parsed spans.
     #[allow(clippy::wrong_self_convention)]
-    fn into_text(&self) -> Result<Text<'static>, Error>;
+    fn into_text(&self) -> Result<HyperlinkedText<'static>, Error> {
+        self.to_text().map(|text| text.into_owned())
+    }
 
-    /// Convert the type to a borrowed `Text` while trying to copy as little as possible.
+    /// Convert the type to a borrowed `HyperlinkedText` while trying to copy as little as possible.
     ///
     /// This method borrows the span contents from the input instead of allocating new strings,
-    /// so the returned `Text` is only valid as long as the input is alive.
+    /// so the returned `HyperlinkedText` is only valid as long as the input is alive.
     ///
-    /// Use this when you only need the parsed `Text` temporarily (for example, render it
+    /// You can convert it to HyperlinkedText<'static> by calling .into_owned() on HyperlinkedText
+    ///
+    /// Use this when you only need the parsed `HyperlinkedText` temporarily (for example, render it
     /// immediately). If you need to store the result beyond the lifetime of the input, use
     /// [`IntoText::into_text`] instead.
     ///
     /// # Example
     ///
     /// ```rust
-    /// # #[cfg(feature = "zero-copy")]
     /// # {
     /// use ansi_to_tui::IntoText as _;
     ///
@@ -115,8 +122,7 @@ pub trait IntoText {
     /// # }
     /// # Ok::<(), ansi_to_tui::Error>(())
     /// ```
-    #[cfg(feature = "zero-copy")]
-    fn to_text(&self) -> Result<Text<'_>, Error>;
+    fn to_text(&self) -> Result<HyperlinkedText<'_>, Error>;
 }
 
 /// Blanket implementation for all `AsRef<[u8]>` types.
@@ -124,12 +130,7 @@ impl<T> IntoText for T
 where
     T: AsRef<[u8]>,
 {
-    fn into_text(&self) -> Result<Text<'static>, Error> {
-        Ok(crate::parser::text(self.as_ref())?.1)
-    }
-
-    #[cfg(feature = "zero-copy")]
-    fn to_text(&self) -> Result<Text<'_>, Error> {
-        Ok(crate::parser::text_fast(self.as_ref())?.1)
+    fn to_text(&self) -> Result<HyperlinkedText<'_>, Error> {
+        Ok(parser::text(self.as_ref())?.1)
     }
 }

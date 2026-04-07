@@ -1,10 +1,13 @@
-use crate::code::AnsiCode;
+use crate::{
+    code::AnsiCode,
+    hyperlink::{Hyperlink, HyperlinkedLine, HyperlinkedSpan, HyperlinkedText},
+};
 use nom::{
     AsChar, IResult, Parser,
     branch::alt,
     bytes::complete::*,
     character::complete::*,
-    combinator::{map_res, opt},
+    combinator::{cond, map_res, opt},
     multi::*,
     sequence::{delimited, preceded},
 };
@@ -23,13 +26,13 @@ enum ColorType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct AnsiItem {
-    code: AnsiCode,
-    color: Option<Color>,
+pub(crate) struct AnsiItem {
+    pub(crate) code: AnsiCode,
+    pub(crate) color: Option<Color>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct AnsiStates {
+pub(crate) struct AnsiStates {
     pub items: smallvec::SmallVec<[AnsiItem; 2]>,
     pub style: Style,
 }
@@ -86,7 +89,7 @@ impl From<AnsiStates> for ratatui_core::style::Style {
     }
 }
 
-pub(crate) fn text(mut s: &[u8]) -> IResult<&[u8], Text<'static>> {
+pub(crate) fn text(mut s: &[u8]) -> IResult<&[u8], HyperlinkedText<'_>> {
     let mut lines = Vec::new();
     let mut last = Style::new();
     while let Ok((_s, (line, style))) = line(last)(s) {
@@ -97,22 +100,7 @@ pub(crate) fn text(mut s: &[u8]) -> IResult<&[u8], Text<'static>> {
             break;
         }
     }
-    Ok((s, Text::from(lines)))
-}
-
-#[cfg(feature = "zero-copy")]
-pub(crate) fn text_fast(mut s: &[u8]) -> IResult<&[u8], Text<'_>> {
-    let mut lines = Vec::new();
-    let mut last = Style::new();
-    while let Ok((_s, (line, style))) = line_fast(last)(s) {
-        lines.push(line);
-        last = style;
-        s = _s;
-        if s.is_empty() {
-            break;
-        }
-    }
-    Ok((s, Text::from(lines)))
+    Ok((s, HyperlinkedText::from(lines)))
 }
 
 fn newline(s: &[u8]) -> IResult<&[u8], ()> {
@@ -120,43 +108,17 @@ fn newline(s: &[u8]) -> IResult<&[u8], ()> {
     Ok((s, ()))
 }
 
-fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)> {
-    // let style_: Style = Default::default();
-    move |s: &[u8]| -> IResult<&[u8], (Line<'static>, Style)> {
+fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (HyperlinkedLine<'_>, Style)> {
+    move |s: &[u8]| -> IResult<&[u8], (HyperlinkedLine<'_>, Style)> {
         let (s, mut text) = take_while(|c| c != b'\n' && c != b'\r').parse(s)?;
         let (s, _) = opt(newline).parse(s)?;
         let mut spans = Vec::new();
         let mut last = style;
         while let Ok((s, span)) = span(last)(text) {
-            // Since reset now tracks seperately we can skip the reset check
-            last = last.patch(span.style);
-
-            if !span.content.is_empty() {
-                spans.push(span);
-            }
-            text = s;
-            if text.is_empty() {
-                break;
-            }
-        }
-
-        Ok((s, (Line::from(spans), last)))
-    }
-}
-
-#[cfg(feature = "zero-copy")]
-fn line_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'_>, Style)> {
-    // let style_: Style = Default::default();
-    move |s: &[u8]| -> IResult<&[u8], (Line<'_>, Style)> {
-        let (s, mut text) = take_while(|c| c != b'\n' && c != b'\r').parse(s)?;
-        let (s, _) = opt(newline).parse(s)?;
-        let mut spans = Vec::new();
-        let mut last = style;
-        while let Ok((s, span)) = span_fast(last)(text) {
-            last = last.patch(span.style);
+            last = last.patch(span.style());
             // If the spans is empty then it might be possible that the style changes
             // but there is no text change
-            if !span.content.is_empty() {
+            if !span.is_empty() {
                 spans.push(span);
             }
             text = s;
@@ -165,63 +127,53 @@ fn line_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'_>, Style)
             }
         }
 
-        Ok((s, (Line::from(spans), last)))
+        Ok((s, (HyperlinkedLine::from(spans), last)))
     }
 }
 
-// fn span(s: &[u8]) -> IResult<&[u8], ratatui::text::Span> {
-fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::error::Error<&[u8]>> {
-    move |s: &[u8]| -> IResult<&[u8], Span<'static>> {
+fn span(
+    last: Style,
+) -> impl Fn(&[u8]) -> IResult<&[u8], HyperlinkedSpan<'_>, nom::error::Error<&[u8]>> {
+    move |s: &[u8]| -> IResult<&[u8], HyperlinkedSpan<'_>> {
         let mut last = last;
-        let (s, style) = opt(style(last)).parse(s)?;
+        let (s, style) = style(last).parse(s)?;
 
         #[cfg(feature = "simd")]
-        let (s, text) = map_res(
+        let text_parser = map_res(
             take_while(|c| c != b'\x1b' && c != b'\n' && c != b'\r'),
             |t| simdutf8::basic::from_utf8(t),
-        )
-        .parse(s)?;
+        );
 
         #[cfg(not(feature = "simd"))]
-        let (s, text) = map_res(
+        let text_parser = map_res(
             take_while(|c| c != b'\x1b' && c != b'\n' && c != b'\r'),
             |t| std::str::from_utf8(t),
-        )
-        .parse(s)?;
+        );
 
-        if let Some(style) = style.flatten() {
+        if let Some(style) = style {
             last = last.patch(style);
         }
 
-        Ok((s, Span::styled(text.to_owned(), last)))
-    }
-}
+        let mut text_span = text_parser.map(|v: &str| HyperlinkedSpan::styled(v, last));
 
-#[cfg(feature = "zero-copy")]
-fn span_fast(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::error::Error<&[u8]>> {
-    move |s: &[u8]| -> IResult<&[u8], Span<'_>> {
-        let mut last = last;
-        let (s, style) = opt(style(last)).parse(s)?;
+        let mut hyperlink_span = hyperlink
+            .map_res(|v| v.parse())
+            .map(|v| HyperlinkedSpan::styled_hyperlink(v.text, v.url, last));
 
-        #[cfg(feature = "simd")]
-        let (s, text) = map_res(
-            take_while(|c| c != b'\x1b' && c != b'\n' && c != b'\r'),
-            |t| simdutf8::basic::from_utf8(t),
-        )
-        .parse(s)?;
+        // let mut text_span = cond(style.is_none(), opt(any_escape_sequence))
+        //     .and(text_span)
+        //     .map(|(_, v)| v);
+        //
+        // hyperlink_span.or(text_span).parse(s) // ~21% over the if-else (more on larger files)
+        // // or
+        // alt((hyperlink_span, text_span)).parse(s) // ~5% over the if-else
 
-        #[cfg(not(feature = "simd"))]
-        let (s, text) = map_res(
-            take_while(|c| c != b'\x1b' && c != b'\n' && c != b'\r'),
-            |t| std::str::from_utf8(t),
-        )
-        .parse(s)?;
-
-        if let Some(style) = style.flatten() {
-            last = last.patch(style);
+        if let Ok((s, h)) = hyperlink_span.parse(s) {
+            Ok((s, h))
+        } else {
+            let (s, _) = cond(style.is_none(), opt(any_escape_sequence)).parse(s)?;
+            text_span.parse(s)
         }
-
-        Ok((s, Span::styled(text, last)))
     }
 }
 
@@ -230,14 +182,7 @@ fn style(
     style: Style,
 ) -> impl Fn(&[u8]) -> IResult<&[u8], Option<Style>, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], Option<Style>> {
-        let (s, r) = match opt(ansi_sgr_code).parse(s)? {
-            (s, Some(r)) => (s, Some(r)),
-            (s, None) => {
-                let (s, _) = any_escape_sequence(s)?;
-                (s, None)
-            }
-        };
-        Ok((s, r.map(|r| Style::from(AnsiStates { style, items: r }))))
+        opt(ansi_sgr_code.map(|items| Style::from(AnsiStates { style, items }))).parse(s)
     }
 }
 
@@ -306,6 +251,19 @@ fn color(s: &[u8]) -> IResult<&[u8], Color> {
             Ok((s, Color::Indexed(index)))
         }
     }
+}
+
+/// A osc 8 hyperlink
+/// Format: `\x1b]8;;<url>\x1b\\<text>\x1b]8;;\x1b\\`
+///
+/// format!("\u{1b}]8;;{url}\u{1b}\\{label}\u{1b}]8;;\u{1b}\\")
+fn hyperlink(s: &[u8]) -> IResult<&[u8], Hyperlink<'_, [u8]>> {
+    let (s, _) = tag("\x1b]8;;").parse(s)?;
+    let (s, url) = take_until("\x1b\\").parse(s)?;
+    let (s, _) = tag("\x1b\\").parse(s)?;
+    let (s, text) = take_until("\x1b]8;;").parse(s)?;
+    let (s, _) = tag("\x1b]8;;\x1b\\").parse(s)?;
+    Ok((s, Hyperlink::new(text, url)))
 }
 
 fn color_type(s: &[u8]) -> IResult<&[u8], ColorType> {
@@ -397,4 +355,60 @@ fn ansi_items_test() {
             .into()
         })
     );
+}
+
+#[cfg(test)]
+mod test_hyperlinks {
+    fn encode_osc8(label: &str, url: &str) -> String {
+        format!("\u{1b}]8;;{url}\u{1b}\\{label}\u{1b}]8;;\u{1b}\\")
+    }
+
+    #[test]
+    fn unit_test_hyperlink() {
+        let label = "Google";
+        let url = "https://www.google.com";
+        let encoded = encode_osc8(label, url);
+        let parsed = super::hyperlink(encoded.as_bytes()).unwrap().1;
+        assert_eq!(parsed.text, label.as_bytes());
+        assert_eq!(parsed.url, url.as_bytes());
+    }
+
+    #[test]
+    fn test_hyperlink_in_text() {
+        let label = "Google";
+        let url = "https://www.google.com";
+        let encoded = format!(
+            "Hello {}! This should be a hyperlink",
+            encode_osc8(label, url)
+        );
+        let parsed = super::text(encoded.as_bytes()).unwrap().1;
+        let line = &parsed.lines[0];
+        assert_eq!(line.spans.len(), 3);
+        assert_eq!(line.spans[0].content(), "Hello ");
+        assert_eq!(line.spans[1].content(), label);
+        assert_eq!(line.spans[2].content(), "! This should be a hyperlink");
+    }
+
+    #[test]
+    fn test_hyperlink_with_style() {
+        let label = "Google";
+        let url = "https://www.google.com";
+        let encoded = format!(
+            "Hello \x1b[1m{}{}! This should be a bold hyperlink\x1b[0m",
+            encode_osc8(label, url),
+            "\x1b[1m"
+        );
+        let parsed = super::text(encoded.as_bytes()).unwrap().1;
+        assert_eq!(parsed.lines.len(), 1);
+        let line = &parsed.lines[0];
+        assert_eq!(line.spans.len(), 3);
+        assert_eq!(line.spans[0].content(), "Hello ");
+        assert_eq!(line.spans[1].content(), label);
+        assert_eq!(line.spans[2].content(), "! This should be a bold hyperlink");
+        assert!(
+            line.spans[1]
+                .style()
+                .has_modifier(ratatui_core::style::Modifier::BOLD)
+        );
+    }
 }

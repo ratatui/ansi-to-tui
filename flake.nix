@@ -56,26 +56,16 @@
           filter = sourceFilters;
           src = ./.;
         };
-        commonArgs =
-          {
-            inherit src;
-            pname = "ansi-to-tui";
-            doCheck = false;
-            # LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
-            # nativeBuildInputs = with pkgs; [
-            #   cmake
-            #   llvmPackages.libclang.lib
-            # ];
-            buildInputs = with pkgs;
-              []
-              ++ (lib.optionals pkgs.stdenv.isDarwin [
-                libiconv
-                # darwin.apple_sdk.frameworks.Metal
-              ]);
-          }
-          // (lib.optionalAttrs pkgs.stdenv.isLinux {
-            # BINDGEN_EXTRA_CLANG_ARGS = "-I${pkgs.llvmPackages.libclang.lib}/lib/clang/18/include";
-          });
+        commonArgs = {
+          inherit src;
+          pname = "ansi-to-tui";
+          doCheck = false;
+          buildInputs = with pkgs;
+            []
+            ++ (lib.optionals pkgs.stdenv.isDarwin [
+              libiconv
+            ]);
+        };
         cargoArtifacts = craneLib.buildPackage commonArgs;
       in {
         checks =
@@ -121,6 +111,7 @@
               stableToolchainWithRustAnalyzer
               cargo-nextest
               cargo-deny
+              cargo-audit
               cargo-outdated
               cargo-semver-checks
             ];
