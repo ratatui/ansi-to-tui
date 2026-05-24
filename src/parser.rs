@@ -1,12 +1,12 @@
 use crate::code::AnsiCode;
 use nom::{
-    AsChar, IResult, Parser,
     branch::alt,
     bytes::complete::*,
     character::complete::*,
     combinator::{map_res, opt},
     multi::*,
     sequence::{delimited, preceded},
+    AsChar, IResult, Parser,
 };
 use ratatui_core::{
     style::{Color, Modifier, Style, Stylize},
@@ -32,19 +32,27 @@ struct AnsiItem {
 struct AnsiStates {
     pub items: smallvec::SmallVec<[AnsiItem; 2]>,
     pub style: Style,
+    /// The style that was in effect at the very start of the parse (i.e. the
+    /// value passed to `text_with_initial_style`).  When the ANSI stream emits
+    /// a SGR reset (`\x1b[0m` or bare `\x1b[m`) the parser restores to this
+    /// style rather than to `Style::reset()`.  This mirrors real terminal
+    /// behaviour where a reset returns to the terminal's ambient background
+    /// rather than to a transparent "default" cell.
+    pub initial: Style,
 }
 
 impl From<AnsiStates> for ratatui_core::style::Style {
     fn from(states: AnsiStates) -> Self {
+        let reset = || Style::reset().patch(states.initial);
         let mut style = states.style;
         if states.items.is_empty() {
             // https://github.com/uttarayan21/ansi-to-tui/issues/40
             // [m should be treated as a reset as well
-            style = Style::reset();
+            style = reset();
         }
         for item in states.items {
             match item.code {
-                AnsiCode::Reset => style = Style::reset(),
+                AnsiCode::Reset => style = reset(),
                 AnsiCode::Bold => style = style.add_modifier(Modifier::BOLD),
                 AnsiCode::Faint => style = style.add_modifier(Modifier::DIM),
                 AnsiCode::Normal => {
@@ -86,10 +94,17 @@ impl From<AnsiStates> for ratatui_core::style::Style {
     }
 }
 
-pub(crate) fn text(mut s: &[u8]) -> IResult<&[u8], Text<'static>> {
+pub(crate) fn text(s: &[u8]) -> IResult<&[u8], Text<'static>> {
+    text_with_initial_style(s, Style::new())
+}
+
+pub(crate) fn text_with_initial_style(
+    mut s: &[u8],
+    initial: Style,
+) -> IResult<&[u8], Text<'static>> {
     let mut lines = Vec::new();
-    let mut last = Style::new();
-    while let Ok((_s, (line, style))) = line(last)(s) {
+    let mut last = initial;
+    while let Ok((_s, (line, style))) = line(last, initial)(s) {
         lines.push(line);
         last = style;
         s = _s;
@@ -101,10 +116,18 @@ pub(crate) fn text(mut s: &[u8]) -> IResult<&[u8], Text<'static>> {
 }
 
 #[cfg(feature = "zero-copy")]
-pub(crate) fn text_fast(mut s: &[u8]) -> IResult<&[u8], Text<'_>> {
+pub(crate) fn text_fast(s: &[u8]) -> IResult<&[u8], Text<'_>> {
+    text_fast_with_initial_style(s, Style::new())
+}
+
+#[cfg(feature = "zero-copy")]
+pub(crate) fn text_fast_with_initial_style(
+    mut s: &[u8],
+    initial: Style,
+) -> IResult<&[u8], Text<'_>> {
     let mut lines = Vec::new();
-    let mut last = Style::new();
-    while let Ok((_s, (line, style))) = line_fast(last)(s) {
+    let mut last = initial;
+    while let Ok((_s, (line, style))) = line_fast(last, initial)(s) {
         lines.push(line);
         last = style;
         s = _s;
@@ -120,14 +143,14 @@ fn newline(s: &[u8]) -> IResult<&[u8], ()> {
     Ok((s, ()))
 }
 
-fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)> {
+fn line(style: Style, initial: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)> {
     // let style_: Style = Default::default();
     move |s: &[u8]| -> IResult<&[u8], (Line<'static>, Style)> {
         let (s, mut text) = take_while(|c| c != b'\n' && c != b'\r').parse(s)?;
         let (s, _) = opt(newline).parse(s)?;
         let mut spans = Vec::new();
         let mut last = style;
-        while let Ok((s, span)) = span(last)(text) {
+        while let Ok((s, span)) = span(last, initial)(text) {
             // Since reset now tracks seperately we can skip the reset check
             last = last.patch(span.style);
 
@@ -145,14 +168,14 @@ fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)
 }
 
 #[cfg(feature = "zero-copy")]
-fn line_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'_>, Style)> {
+fn line_fast(style: Style, initial: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'_>, Style)> {
     // let style_: Style = Default::default();
     move |s: &[u8]| -> IResult<&[u8], (Line<'_>, Style)> {
         let (s, mut text) = take_while(|c| c != b'\n' && c != b'\r').parse(s)?;
         let (s, _) = opt(newline).parse(s)?;
         let mut spans = Vec::new();
         let mut last = style;
-        while let Ok((s, span)) = span_fast(last)(text) {
+        while let Ok((s, span)) = span_fast(last, initial)(text) {
             last = last.patch(span.style);
             // If the spans is empty then it might be possible that the style changes
             // but there is no text change
@@ -170,10 +193,13 @@ fn line_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'_>, Style)
 }
 
 // fn span(s: &[u8]) -> IResult<&[u8], ratatui::text::Span> {
-fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::error::Error<&[u8]>> {
+fn span(
+    last: Style,
+    initial: Style,
+) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], Span<'static>> {
         let mut last = last;
-        let (s, style) = opt(style(last)).parse(s)?;
+        let (s, style) = opt(style(last, initial)).parse(s)?;
 
         #[cfg(feature = "simd")]
         let (s, text) = map_res(
@@ -198,10 +224,13 @@ fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::err
 }
 
 #[cfg(feature = "zero-copy")]
-fn span_fast(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::error::Error<&[u8]>> {
+fn span_fast(
+    last: Style,
+    initial: Style,
+) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], Span<'_>> {
         let mut last = last;
-        let (s, style) = opt(style(last)).parse(s)?;
+        let (s, style) = opt(style(last, initial)).parse(s)?;
 
         #[cfg(feature = "simd")]
         let (s, text) = map_res(
@@ -228,6 +257,7 @@ fn span_fast(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::err
 #[allow(clippy::type_complexity)]
 fn style(
     style: Style,
+    initial: Style,
 ) -> impl Fn(&[u8]) -> IResult<&[u8], Option<Style>, nom::error::Error<&[u8]>> {
     move |s: &[u8]| -> IResult<&[u8], Option<Style>> {
         let (s, r) = match opt(ansi_sgr_code).parse(s)? {
@@ -237,7 +267,16 @@ fn style(
                 (s, None)
             }
         };
-        Ok((s, r.map(|r| Style::from(AnsiStates { style, items: r }))))
+        Ok((
+            s,
+            r.map(|r| {
+                Style::from(AnsiStates {
+                    style,
+                    items: r,
+                    initial,
+                })
+            }),
+        ))
     }
 }
 
@@ -336,11 +375,12 @@ fn color_test() {
 #[test]
 fn ansi_items_test() {
     let sc = Default::default();
-    let t = style(sc)(b"\x1b[38;2;3;3;3m").unwrap().1.unwrap();
+    let t = style(sc, sc)(b"\x1b[38;2;3;3;3m").unwrap().1.unwrap();
     assert_eq!(
         t,
         Style::from(AnsiStates {
             style: sc,
+            initial: sc,
             items: vec![AnsiItem {
                 code: AnsiCode::SetForegroundColor,
                 color: Some(Color::Rgb(3, 3, 3))
@@ -349,9 +389,10 @@ fn ansi_items_test() {
         })
     );
     assert_eq!(
-        style(sc)(b"\x1b[38;5;3m").unwrap().1.unwrap(),
+        style(sc, sc)(b"\x1b[38;5;3m").unwrap().1.unwrap(),
         Style::from(AnsiStates {
             style: sc,
+            initial: sc,
             items: vec![AnsiItem {
                 code: AnsiCode::SetForegroundColor,
                 color: Some(Color::Indexed(3))
@@ -360,9 +401,10 @@ fn ansi_items_test() {
         })
     );
     assert_eq!(
-        style(sc)(b"\x1b[38;5;3;48;5;3m").unwrap().1.unwrap(),
+        style(sc, sc)(b"\x1b[38;5;3;48;5;3m").unwrap().1.unwrap(),
         Style::from(AnsiStates {
             style: sc,
+            initial: sc,
             items: vec![
                 AnsiItem {
                     code: AnsiCode::SetForegroundColor,
@@ -377,9 +419,10 @@ fn ansi_items_test() {
         })
     );
     assert_eq!(
-        style(sc)(b"\x1b[38;5;3;48;5;3;1m").unwrap().1.unwrap(),
+        style(sc, sc)(b"\x1b[38;5;3;48;5;3;1m").unwrap().1.unwrap(),
         Style::from(AnsiStates {
             style: sc,
+            initial: sc,
             items: vec![
                 AnsiItem {
                     code: AnsiCode::SetForegroundColor,

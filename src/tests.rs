@@ -546,3 +546,130 @@ fn test_both(bytes: impl AsRef<[u8]>, other: Text) {
     #[cfg(feature = "zero-copy")]
     assert_eq!(zero_copy, other);
 }
+
+#[track_caller]
+fn test_both_with_style(bytes: impl AsRef<[u8]>, initial: Style, other: Text) {
+    let bytes = bytes.as_ref();
+
+    #[cfg(feature = "zero-copy")]
+    let zero_copy = bytes.to_text_with_style(initial).unwrap();
+
+    let owned = bytes.into_text_with_style(initial).unwrap();
+
+    #[cfg(feature = "zero-copy")]
+    assert_eq!(
+        zero_copy, owned,
+        "zero-copy and owned version of the methods have diverged; this is a bug in the library"
+    );
+
+    assert_eq!(
+        owned, other,
+        "owned and other have diverged; this might be a bug in the library or a ratatui update"
+    );
+
+    #[cfg(feature = "zero-copy")]
+    assert_eq!(zero_copy, other);
+}
+
+// --- into_text_with_style tests ---
+
+#[test]
+fn initial_style_applied_to_plain_text() {
+    // Plain bytes with no escapes should inherit the initial background.
+    let initial = Style::default().bg(Color::Indexed(234));
+    let bytes = b"hello";
+    let expected = Text::from(Line::from(vec![Span::styled("hello", initial)]));
+    test_both_with_style(bytes, initial, expected);
+}
+
+#[test]
+fn initial_style_carries_across_lines() {
+    // The initial background must persist across newlines when no reset is emitted.
+    let initial = Style::default().bg(Color::Indexed(234));
+    let bytes = b"line1\nline2";
+    let expected = Text::from(vec![
+        Line::from(vec![Span::styled("line1", initial)]),
+        Line::from(vec![Span::styled("line2", initial)]),
+    ]);
+    test_both_with_style(bytes, initial, expected);
+}
+
+#[test]
+fn explicit_escape_overrides_initial_style() {
+    // An explicit background escape must override (not be blocked by) the initial style.
+    let initial = Style::default().bg(Color::Indexed(234));
+    let bytes = b"\x1b[48;5;200mtext";
+    let expected = Text::from(Line::from(vec![Span::styled(
+        "text",
+        Style::default().bg(Color::Indexed(200)),
+    )]));
+    test_both_with_style(bytes, initial, expected);
+}
+
+#[test]
+fn reset_restores_initial_style() {
+    // After \x1b[m (bare reset) the parser must restore to Style::reset() overlaid
+    // with the initial seed, mirroring real terminal behaviour where SGR 0 returns
+    // to the ambient background rather than to a transparent "unset" cell.
+    let initial = Style::default().bg(Color::Indexed(234));
+    let bytes = b"\x1b[mafter_reset";
+    // Style::reset() sets all fields explicitly; patch(initial) overrides bg with seed.
+    let expected_style = Style::reset().patch(initial);
+    let expected = Text::from(Line::from(vec![Span::styled(
+        "after_reset",
+        expected_style,
+    )]));
+    test_both_with_style(bytes, initial, expected);
+}
+
+#[test]
+fn sgr0_reset_restores_initial_style() {
+    // \x1b[0m (explicit SGR 0) must also restore to Style::reset() overlaid with seed.
+    let initial = Style::default().bg(Color::Indexed(234));
+    let bytes = b"\x1b[0mafter_reset";
+    let expected_style = Style::reset().patch(initial);
+    let expected = Text::from(Line::from(vec![Span::styled(
+        "after_reset",
+        expected_style,
+    )]));
+    test_both_with_style(bytes, initial, expected);
+}
+
+#[test]
+fn reset_after_override_restores_initial_style() {
+    // Override bg, then reset — should get Style::reset() + seed bg, not Color::Reset bg.
+    let initial = Style::default().bg(Color::Indexed(234));
+    let bytes = b"\x1b[48;5;200mA\x1b[0mB";
+    let a_style = Style::default().bg(Color::Indexed(200));
+    // After reset: Style::reset() merged with initial bg
+    let b_style = Style::reset().patch(initial);
+    let expected = Text::from(Line::from(vec![
+        Span::styled("A", a_style),
+        Span::styled("B", b_style),
+    ]));
+    test_both_with_style(bytes, initial, expected);
+}
+
+#[test]
+fn reset_carries_across_lines_to_initial() {
+    // A reset on line 1 should leave line 2 starting with Style::reset() + seed.
+    let initial = Style::default().bg(Color::Indexed(234));
+    let reset_style = Style::reset().patch(initial);
+    let bytes = b"\x1b[0m\nline2";
+    let expected = Text::from(vec![
+        Line::from(vec![]), // the reset produced no visible text on line 1
+        Line::from(vec![Span::styled("line2", reset_style)]),
+    ]);
+    test_both_with_style(bytes, initial, expected);
+}
+
+#[test]
+fn initial_style_without_bg_leaves_explicit_bg_intact() {
+    // An initial style with only fg set must not interfere with bg set by an escape.
+    let initial = Style::default().fg(Color::White);
+    let bytes = b"\x1b[48;5;10mcolored";
+    // The initial fg is carried as seed; the escape adds bg=10.
+    let expected_style = initial.bg(Color::Indexed(10));
+    let expected = Text::from(Line::from(vec![Span::styled("colored", expected_style)]));
+    test_both_with_style(bytes, initial, expected);
+}

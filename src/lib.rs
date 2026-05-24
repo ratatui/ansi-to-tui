@@ -57,7 +57,7 @@
 //! [simdutf8]: https://github.com/rusticstuff/simdutf8
 
 pub use error::Error;
-use ratatui_core::text::Text;
+use ratatui_core::{style::Style, text::Text};
 
 mod code;
 mod error;
@@ -94,6 +94,31 @@ pub trait IntoText {
     #[allow(clippy::wrong_self_convention)]
     fn into_text(&self) -> Result<Text<'static>, Error>;
 
+    /// Convert the type to an owned `Text`, seeding the parser with an initial [`Style`].
+    ///
+    /// This is useful when the ANSI stream does not carry an explicit background (or foreground)
+    /// for every character — for example, tmux pane snapshots that rely on the terminal's ambient
+    /// background color.  By providing an `initial` style you ensure that every span in the
+    /// returned `Text` inherits those defaults unless they are explicitly overridden by an escape
+    /// sequence in the input.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use ansi_to_tui::IntoText as _;
+    /// use ratatui_core::style::{Color, Style};
+    ///
+    /// // Treat Color::Indexed(234) as the ambient background colour.
+    /// let initial = Style::default().bg(Color::Indexed(234));
+    /// let bytes = b"hello world";
+    /// let text = bytes.into_text_with_style(initial)?;
+    /// // Every span will have bg = Color::Indexed(234) because no escape overrides it.
+    /// assert_eq!(text.lines[0].spans[0].style.bg, Some(Color::Indexed(234)));
+    /// # Ok::<(), ansi_to_tui::Error>(())
+    /// ```
+    #[allow(clippy::wrong_self_convention)]
+    fn into_text_with_style(&self, initial: Style) -> Result<Text<'static>, Error>;
+
     /// Convert the type to a borrowed `Text` while trying to copy as little as possible.
     ///
     /// This method borrows the span contents from the input instead of allocating new strings,
@@ -117,6 +142,29 @@ pub trait IntoText {
     /// ```
     #[cfg(feature = "zero-copy")]
     fn to_text(&self) -> Result<Text<'_>, Error>;
+
+    /// Convert the type to a borrowed `Text`, seeding the parser with an initial [`Style`].
+    ///
+    /// Zero-copy variant of [`IntoText::into_text_with_style`].  The returned `Text` borrows
+    /// span content from the input, so it lives only as long as `self`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "zero-copy")]
+    /// # {
+    /// use ansi_to_tui::IntoText as _;
+    /// use ratatui_core::style::{Color, Style};
+    ///
+    /// let initial = Style::default().bg(Color::Indexed(234));
+    /// let bytes = b"hello world";
+    /// let text = bytes.to_text_with_style(initial)?;
+    /// assert_eq!(text.lines[0].spans[0].style.bg, Some(Color::Indexed(234)));
+    /// # }
+    /// # Ok::<(), ansi_to_tui::Error>(())
+    /// ```
+    #[cfg(feature = "zero-copy")]
+    fn to_text_with_style(&self, initial: Style) -> Result<Text<'_>, Error>;
 }
 
 /// Blanket implementation for all `AsRef<[u8]>` types.
@@ -128,8 +176,17 @@ where
         Ok(crate::parser::text(self.as_ref())?.1)
     }
 
+    fn into_text_with_style(&self, initial: Style) -> Result<Text<'static>, Error> {
+        Ok(crate::parser::text_with_initial_style(self.as_ref(), initial)?.1)
+    }
+
     #[cfg(feature = "zero-copy")]
     fn to_text(&self) -> Result<Text<'_>, Error> {
         Ok(crate::parser::text_fast(self.as_ref())?.1)
+    }
+
+    #[cfg(feature = "zero-copy")]
+    fn to_text_with_style(&self, initial: Style) -> Result<Text<'_>, Error> {
+        Ok(crate::parser::text_fast_with_initial_style(self.as_ref(), initial)?.1)
     }
 }
