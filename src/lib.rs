@@ -50,6 +50,47 @@
 //! # Ok(()) }
 //! ```
 //!
+//! # Resets and Base Styles
+//!
+//! Codes that turn a color or modifier off, such as `\x1b[0m`, `\x1b[39m` or `\x1b[23m`, don't
+//! set it to the terminal's default but leave it unset. The text then keeps the style of whatever
+//! it is rendered onto: after `\x1b[0m` it keeps the widget's background, and after `\x1b[23m`
+//! (italic off) it is still italic if the widget's style is italic.
+//!
+//! ```rust
+//! # fn main() -> eyre::Result<()> {
+//! use ansi_to_tui::IntoText as _;
+//! use ratatui_core::{
+//!     buffer::Buffer,
+//!     layout::Rect,
+//!     style::{Color, Style},
+//!     widgets::Widget as _,
+//! };
+//!
+//! let text = b"\x1b[31mred\x1b[0m plain".into_text()?;
+//! let area = Rect::new(0, 0, 9, 1);
+//! let mut buf = Buffer::empty(area);
+//! buf.set_style(area, Style::new().bg(Color::Blue));
+//! text.render(area, &mut buf);
+//!
+//! assert_eq!(buf[(0, 0)].fg, Color::Red);
+//! assert!(buf.content.iter().all(|cell| cell.bg == Color::Blue));
+//! # Ok(()) }
+//! ```
+//!
+//! To have these codes fall back to the terminal's defaults instead, set the text's style to
+//! [`Style::reset()`][Style]. This ignores the widget's style for all of the text, though, even
+//! where the input sets no style at all, like the leading `plain` below.
+//!
+//! ```rust
+//! # fn main() -> eyre::Result<()> {
+//! use ansi_to_tui::IntoText as _;
+//! use ratatui_core::style::Style;
+//!
+//! let text = b"plain \x1b[31mred\x1b[0m plain".into_text()?.style(Style::reset());
+//! # Ok(()) }
+//! ```
+//!
 //! [Text]: https://docs.rs/ratatui-core/latest/ratatui_core/text/struct.Text.html
 //! [Color]: https://docs.rs/ratatui-core/latest/ratatui_core/style/enum.Color.html
 //! [Style]: https://docs.rs/ratatui-core/latest/ratatui_core/style/struct.Style.html
