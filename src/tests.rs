@@ -161,8 +161,8 @@ fn unknown_sgr_codes_are_ignored_and_chained_items_still_apply() {
 fn empty_sgr_sequence_is_treated_as_reset() {
     let string = b"\x1b[32mGREEN\x1b[mFOO\nFOO";
     let output = Text::from(vec![
-        Line::from(vec!["GREEN".green(), Span::styled("FOO", Style::reset())]),
-        Line::from(Span::styled("FOO", Style::reset())),
+        Line::from(vec!["GREEN".green(), Span::raw("FOO")]),
+        Line::from(Span::raw("FOO")),
     ]);
     test_both(string, output);
 }
@@ -178,20 +178,14 @@ fn chained_sgr_items_in_single_escape_sequence_are_applied_in_order() {
 fn does_not_emit_empty_spans_for_style_only_changes() {
     // Yellow -> Red -> Green -> "Hello" -> Reset -> "World"
     let bytes: Vec<u8> = b"\x1b[33m\x1b[31m\x1b[32mHello\x1b[0mWorld".to_vec();
-    let output = Text::from(Line::from(vec![
-        "Hello".green(),
-        Span::styled("World", Style::reset()),
-    ]));
+    let output = Text::from(Line::from(vec!["Hello".green(), Span::raw("World")]));
     test_both(bytes, output);
 }
 
 #[test]
 fn sgr_0_resets_style() {
     let string = "\x1b[33mA\x1b[0mB";
-    let output = Text::from(Line::from(vec![
-        "A".yellow(),
-        Span::styled("B", Style::reset()),
-    ]));
+    let output = Text::from(Line::from(vec!["A".yellow(), Span::raw("B")]));
     test_both(string, output);
 }
 
@@ -201,7 +195,7 @@ fn sgr_1_and_22_toggle_bold() {
     let output = Text::from(Line::from(vec![
         Span::raw("not, "),
         "bold".bold(),
-        ", not anymore".not_bold().not_dim(),
+        Span::raw(", not anymore"),
     ]));
     test_both(bytes, output);
 }
@@ -212,7 +206,7 @@ fn sgr_2_and_22_toggle_faint() {
     let output = Text::from(Line::from(vec![
         Span::raw("not, "),
         "faint".dim(),
-        ", not anymore".not_bold().not_dim(),
+        Span::raw(", not anymore"),
     ]));
     test_both(bytes, output);
 }
@@ -225,7 +219,7 @@ fn sgr_3_and_23_toggle_italic() {
     let output = Text::from(Line::from(vec![
         Span::raw("not, "),
         "italic".italic(),
-        ", not anymore".not_italic(),
+        Span::raw(", not anymore"),
     ]));
     test_both(bytes, output);
 }
@@ -238,7 +232,7 @@ fn sgr_4_and_24_toggle_underline() {
     let output = Text::from(Line::from(vec![
         Span::raw("not, "),
         "underlined".underlined(),
-        ", not anymore".not_underlined(),
+        Span::raw(", not anymore"),
     ]));
     test_both(bytes, output);
 }
@@ -251,7 +245,7 @@ fn sgr_5_and_25_toggle_slow_blink() {
     let output = Text::from(Line::from(vec![
         Span::raw("not, "),
         "blinking".slow_blink(),
-        ", not anymore".not_slow_blink().not_rapid_blink(),
+        Span::raw(", not anymore"),
     ]));
     test_both(bytes, output);
 }
@@ -262,7 +256,7 @@ fn sgr_6_and_25_toggle_rapid_blink() {
     let output = Text::from(Line::from(vec![
         Span::raw("not, "),
         "rapid".rapid_blink(),
-        ", not anymore".not_slow_blink().not_rapid_blink(),
+        Span::raw(", not anymore"),
     ]));
     test_both(bytes, output);
 }
@@ -275,7 +269,7 @@ fn sgr_7_and_27_toggle_reverse_video() {
     let output = Text::from(Line::from(vec![
         Span::raw("not, "),
         "reversed".reversed(),
-        ", not anymore".not_reversed(),
+        Span::raw(", not anymore"),
     ]));
     test_both(bytes, output);
 }
@@ -288,7 +282,7 @@ fn sgr_8_and_28_toggle_conceal() {
     let output = Text::from(Line::from(vec![
         Span::raw("not, "),
         "concealed".hidden(),
-        ", not anymore".not_hidden(),
+        Span::raw(", not anymore"),
     ]));
     test_both(bytes, output);
 }
@@ -301,7 +295,7 @@ fn sgr_9_and_29_toggle_crossed_out() {
     let output = Text::from(Line::from(vec![
         Span::raw("not, "),
         "crossed".crossed_out(),
-        ", not anymore".not_crossed_out(),
+        Span::raw(", not anymore"),
     ]));
     test_both(bytes, output);
 }
@@ -433,10 +427,7 @@ fn parses_4bit_bright_colors_and_backgrounds() {
 #[test]
 fn sgr_31_and_39_toggle_foreground_color() {
     let bytes: Vec<u8> = b"\x1b[31;1mred\x1b[39mdefault".to_vec();
-    let output = Text::from(Line::from(vec![
-        "red".red().bold(),
-        "default".bold().fg(Color::Reset),
-    ]));
+    let output = Text::from(Line::from(vec!["red".red().bold(), "default".bold()]));
     test_both(bytes, output);
 }
 
@@ -445,7 +436,7 @@ fn sgr_44_and_49_toggle_background_color() {
     let bytes: Vec<u8> = b"\x1b[44;1mblue-bg\x1b[49mdefault".to_vec();
     let output = Text::from(Line::from(vec![
         "blue-bg".on_blue().bold(),
-        "default".bold().bg(Color::Reset),
+        "default".bold(),
     ]));
     test_both(bytes, output);
 }
@@ -507,20 +498,83 @@ fn carries_style_across_lines_and_handles_resets() {
     let output = Text::from(vec![
         Line::from(vec![
             "* ".green(),
-            Span::styled("Running before-startup command ", Style::reset()),
-            Span::styled("command", Style::reset()).bold(),
-            Span::styled("=make my-simple-package.cabal", Style::reset()),
+            Span::raw("Running before-startup command "),
+            "command".bold(),
+            Span::raw("=make my-simple-package.cabal"),
         ]),
         Line::from(vec![
-            Span::styled("* ", Style::reset()).green(),
-            Span::styled("$ make my-simple-package.cabal", Style::reset()),
+            "* ".green(),
+            Span::raw("$ make my-simple-package.cabal"),
         ]),
-        Line::from(vec![Span::styled(
-            "Build profile: -w ghc-9.0.2 -O1",
-            Style::reset(),
-        )]),
+        Line::from(vec![Span::raw("Build profile: -w ghc-9.0.2 -O1")]),
     ]);
     test_both(bytes, output);
+}
+
+#[test]
+fn leaves_everything_unset_on_reset() {
+    let bytes = "\x1b[1;33;44mA\x1b[0mB";
+    let output = Text::from(Line::from(vec![
+        "A".yellow().on_blue().bold(),
+        Span::raw("B"),
+    ]));
+    test_both(bytes, output);
+}
+
+#[test]
+fn leaves_foreground_unset_on_default_foreground() {
+    let bytes = "\x1b[33;44mA\x1b[39mB";
+    let output = Text::from(Line::from(vec!["A".yellow().on_blue(), "B".on_blue()]));
+    test_both(bytes, output);
+}
+
+#[test]
+fn leaves_background_unset_on_default_background() {
+    let bytes = "\x1b[33;44mA\x1b[49mB";
+    let output = Text::from(Line::from(vec!["A".yellow().on_blue(), "B".yellow()]));
+    test_both(bytes, output);
+}
+
+#[test]
+fn keeps_the_colors_the_input_asks_for() {
+    let bytes = "\x1b[0mA\x1b[40mB";
+    let output = Text::from(Line::from(vec![Span::raw("A"), "B".on_black()]));
+    test_both(bytes, output);
+}
+
+#[test]
+fn base_style_survives_a_reset() {
+    let base = Style::new().fg(Color::Green).bold();
+    test_patched_onto(
+        base,
+        "\x1b[31mA\x1b[0mB",
+        vec![Style::new().fg(Color::Red).bold(), base],
+    );
+}
+
+#[test]
+fn base_style_survives_a_modifier_being_switched_off() {
+    let base = Style::new().italic();
+    test_patched_onto(base, "\x1b[3mA\x1b[23mB", vec![Style::new().italic(), base]);
+}
+
+/// Assert the span styles the input produces once patched onto `base`.
+#[track_caller]
+fn test_patched_onto(base: Style, bytes: impl AsRef<[u8]>, expected: Vec<Style>) {
+    let bytes = bytes.as_ref();
+
+    let patched = |text: &Text| -> Vec<Style> {
+        text.lines
+            .iter()
+            .flat_map(|line| &line.spans)
+            .map(|span| base.patch(span.style))
+            .collect()
+    };
+
+    #[cfg(feature = "zero-copy")]
+    assert_eq!(patched(&bytes.to_text().unwrap()), expected);
+
+    assert_eq!(patched(&bytes.into_text().unwrap()), expected);
 }
 
 #[track_caller]

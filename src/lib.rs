@@ -17,6 +17,10 @@
 //! - Colors: named (3/4-bit, 8/16-color), indexed (8-bit, 256-color), and truecolor (24-bit RGB).
 //! - Optional `zero-copy` API that borrows from the input.
 //!
+//! Whatever the input returns to its default is left unset in the produced [`Style`][Style],
+//! rather than spelled out as [`Color::Reset`][Color] and [`Modifier`][Modifier] removals, so the
+//! text inherits it from whatever it is drawn onto.
+//!
 //! # Supported Color Codes
 //!
 //! | Color Mode                  | Supported | SGR Example              | Ratatui `Color` Example |
