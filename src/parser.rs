@@ -34,39 +34,50 @@ struct AnsiStates {
     pub style: Style,
 }
 
+/// The style with the given modifiers returned to their default.
+///
+/// Unlike [`Style::remove_modifier`] this does not ask for them to be removed from the style we
+/// are applied to, it just stops asking for them ourselves.
+fn unset_modifier(style: Style, modifier: Modifier) -> Style {
+    Style {
+        add_modifier: style.add_modifier.difference(modifier),
+        ..style
+    }
+}
+
 impl From<AnsiStates> for ratatui_core::style::Style {
     fn from(states: AnsiStates) -> Self {
         let mut style = states.style;
         if states.items.is_empty() {
             // https://github.com/uttarayan21/ansi-to-tui/issues/40
             // [m should be treated as a reset as well
-            style = Style::reset();
+            style = Style::new();
         }
         for item in states.items {
             match item.code {
-                AnsiCode::Reset => style = Style::reset(),
+                AnsiCode::Reset => style = Style::new(),
                 AnsiCode::Bold => style = style.add_modifier(Modifier::BOLD),
                 AnsiCode::Faint => style = style.add_modifier(Modifier::DIM),
                 AnsiCode::Normal => {
-                    style = style.remove_modifier(Modifier::BOLD | Modifier::DIM);
+                    style = unset_modifier(style, Modifier::BOLD | Modifier::DIM);
                 }
                 AnsiCode::Italic => style = style.add_modifier(Modifier::ITALIC),
-                AnsiCode::NotItalic => style = style.remove_modifier(Modifier::ITALIC),
+                AnsiCode::NotItalic => style = unset_modifier(style, Modifier::ITALIC),
                 AnsiCode::Underline => style = style.add_modifier(Modifier::UNDERLINED),
-                AnsiCode::UnderlineOff => style = style.remove_modifier(Modifier::UNDERLINED),
+                AnsiCode::UnderlineOff => style = unset_modifier(style, Modifier::UNDERLINED),
                 AnsiCode::SlowBlink => style = style.add_modifier(Modifier::SLOW_BLINK),
                 AnsiCode::RapidBlink => style = style.add_modifier(Modifier::RAPID_BLINK),
                 AnsiCode::BlinkOff => {
-                    style = style.remove_modifier(Modifier::SLOW_BLINK | Modifier::RAPID_BLINK)
+                    style = unset_modifier(style, Modifier::SLOW_BLINK | Modifier::RAPID_BLINK)
                 }
                 AnsiCode::Reverse => style = style.add_modifier(Modifier::REVERSED),
-                AnsiCode::InvertOff => style = style.remove_modifier(Modifier::REVERSED),
+                AnsiCode::InvertOff => style = unset_modifier(style, Modifier::REVERSED),
                 AnsiCode::Conceal => style = style.add_modifier(Modifier::HIDDEN),
-                AnsiCode::Reveal => style = style.remove_modifier(Modifier::HIDDEN),
+                AnsiCode::Reveal => style = unset_modifier(style, Modifier::HIDDEN),
                 AnsiCode::CrossedOut => style = style.add_modifier(Modifier::CROSSED_OUT),
-                AnsiCode::CrossedOutOff => style = style.remove_modifier(Modifier::CROSSED_OUT),
-                AnsiCode::DefaultForegroundColor => style = style.fg(Color::Reset),
-                AnsiCode::DefaultBackgroundColor => style = style.bg(Color::Reset),
+                AnsiCode::CrossedOutOff => style = unset_modifier(style, Modifier::CROSSED_OUT),
+                AnsiCode::DefaultForegroundColor => style = Style { fg: None, ..style },
+                AnsiCode::DefaultBackgroundColor => style = Style { bg: None, ..style },
                 AnsiCode::SetForegroundColor => {
                     if let Some(color) = item.color {
                         style = style.fg(color)
@@ -128,8 +139,7 @@ fn line(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'static>, Style)
         let mut spans = Vec::new();
         let mut last = style;
         while let Ok((s, span)) = span(last)(text) {
-            // Since reset now tracks seperately we can skip the reset check
-            last = last.patch(span.style);
+            last = span.style;
 
             if !span.content.is_empty() {
                 spans.push(span);
@@ -153,7 +163,7 @@ fn line_fast(style: Style) -> impl Fn(&[u8]) -> IResult<&[u8], (Line<'_>, Style)
         let mut spans = Vec::new();
         let mut last = style;
         while let Ok((s, span)) = span_fast(last)(text) {
-            last = last.patch(span.style);
+            last = span.style;
             // If the spans is empty then it might be possible that the style changes
             // but there is no text change
             if !span.content.is_empty() {
@@ -190,7 +200,7 @@ fn span(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'static>, nom::err
         .parse(s)?;
 
         if let Some(style) = style.flatten() {
-            last = last.patch(style);
+            last = style;
         }
 
         Ok((s, Span::styled(text.to_owned(), last)))
@@ -218,13 +228,18 @@ fn span_fast(last: Style) -> impl Fn(&[u8]) -> IResult<&[u8], Span<'_>, nom::err
         .parse(s)?;
 
         if let Some(style) = style.flatten() {
-            last = last.patch(style);
+            last = style;
         }
 
         Ok((s, Span::styled(text, last)))
     }
 }
 
+/// The style an SGR code yields when applied on top of `style`.
+///
+/// The result already carries everything that is still in effect, so callers replace their current
+/// style with it rather than patching it in — patching would keep fields the code left unset on
+/// purpose.
 #[allow(clippy::type_complexity)]
 fn style(
     style: Style,
