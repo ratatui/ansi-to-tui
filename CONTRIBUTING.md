@@ -22,6 +22,8 @@ reliable over time:
 - Reproducible builds across machines/CI runners, which helps avoid "works on my machine" issues.
 
 The Cargo workflow exists so contributors can run the same checks without needing to learn Nix.
+It tests both the latest stable Rust and the minimum supported Rust version (MSRV), Rust 1.88.
+The MSRV job runs tests and doctests with all features and with no default features.
 
 ## Local Development (Cargo)
 
@@ -42,6 +44,19 @@ If you don't have `cargo-nextest` installed, you can use `cargo test` instead:
 cargo test --all-features
 cargo test --no-default-features
 ```
+
+### Minimum Supported Rust Version
+
+Run the MSRV checks locally with:
+
+```bash
+rustup toolchain install 1.88.0 --profile minimal
+cargo +1.88.0 test --locked --all-features
+cargo +1.88.0 test --locked --no-default-features
+```
+
+When raising the MSRV, keep `Cargo.toml`, the `msrv` job in `.github/workflows/build.yml`,
+`flake.nix`, and the versions documented here and in `README.md` aligned.
 
 ### Dependency and License Checks
 

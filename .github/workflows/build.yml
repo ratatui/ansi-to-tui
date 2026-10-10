@@ -59,6 +59,16 @@ jobs:
       - run: cargo nextest run --all-features
       - run: cargo nextest run --no-default-features
 
+  msrv:
+    name: msrv
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --locked --all-features
+      - run: cargo test --locked --no-default-features
+
   doc:
     name: doc
     runs-on: ubuntu-latest

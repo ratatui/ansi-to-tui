@@ -453,7 +453,7 @@ fn sgr_44_and_49_toggle_background_color() {
 #[test]
 fn parses_256color_foreground_palette() {
     for i in 0..256 {
-        let bytes = format!("\x1b[38;5;{}mHELLO", i).as_bytes().to_vec();
+        let bytes = format!("\x1b[38;5;{i}mHELLO").as_bytes().to_vec();
         let output = Text::from("HELLO".fg(Color::Indexed(i as u8)));
         test_both(bytes, output);
     }
@@ -462,7 +462,7 @@ fn parses_256color_foreground_palette() {
 #[test]
 fn parses_256color_background_palette() {
     for i in 0..256 {
-        let bytes = format!("\x1b[48;5;{}mHELLO", i).as_bytes().to_vec();
+        let bytes = format!("\x1b[48;5;{i}mHELLO").as_bytes().to_vec();
         let output = Text::from("HELLO".bg(Color::Indexed(i as u8)));
         test_both(bytes, output);
     }
