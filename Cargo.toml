@@ -3,7 +3,7 @@ name = "ansi-to-tui"
 version = "8.0.1"
 authors = ["Uttarayan Mondal <email@uttarayan.me>"]
 edition = "2024"
-rust-version = "1.86"
+rust-version = "1.88"
 description = "Convert ANSI color and style codes into Ratatui Text"
 keywords = ["ansi", "ascii", "ratatui", "parser", "style"]
 license = "MIT"
@@ -13,8 +13,10 @@ documentation = "https://docs.rs/ansi-to-tui"
 homepage = "https://ratatui.rs"
 
 [dependencies]
+# Enforce the RUSTSEC-2026-0253 fix in ratatui-core's transitive dependency.
+lru = "0.18.2"
 nom = "8"
-ratatui-core = { version = "0.1.0", default-features = false }
+ratatui-core = { version = "0.1.2", default-features = false }
 simdutf8 = { version = "0.1", optional = true }
 smallvec = { version = "1", features = ["const_generics"] }
 thiserror = "2"

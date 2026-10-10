@@ -20,6 +20,6 @@ pub enum Error {
 
 impl From<nom::Err<nom::error::Error<&[u8]>>> for Error {
     fn from(e: nom::Err<nom::error::Error<&[u8]>>) -> Self {
-        Self::NomError(format!("{:?}", e))
+        Self::NomError(format!("{e:?}"))
     }
 }

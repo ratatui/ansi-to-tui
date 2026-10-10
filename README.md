@@ -19,6 +19,10 @@ having to pre-clean it.
 | Indexed (8-bit, 256-color)  |     ✓     | `\x1b[38;5;<N>m`         | `Color::Indexed(1)`     |
 | Truecolor (24-bit RGB)      |     ✓     | `\x1b[38;2;<R>;<G>;<B>m` | `Color::Rgb(255, 0, 0)` |
 
+## Minimum Supported Rust Version
+
+Rust 1.88 or newer is required.
+
 ## Example
 
 ```rust
