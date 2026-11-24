@@ -260,7 +260,7 @@ fn any_escape_sequence(s: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
     // Attempt to consume most escape codes, including a single escape char.
     //
     // Most escape codes begin with ESC[ and are terminated by an alphabetic character,
-    // but OSC codes begin with ESC] and are terminated by an ascii bell (\x07)
+    // but OSC codes begin with ESC] and are terminated by an ascii bell (\x07) or ST (ESC \)
     // and a truncated/invalid code may just be a standalone ESC or not be terminated.
     //
     // We should try to consume as much of it as possible to match behavior of most terminals;
@@ -270,7 +270,11 @@ fn any_escape_sequence(s: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
         char('\x1b'),
         opt(alt((
             delimited(char('['), take_till(AsChar::is_alpha), opt(take(1u8))),
-            delimited(char(']'), take_till(|c| c == b'\x07'), opt(take(1u8))),
+            delimited(
+                char(']'),
+                take_till(|c| c == b'\x07' || c == b'\x1b'),
+                opt(alt((tag("\x07"), tag("\x1b\\")))),
+            ),
         ))),
     )
     .parse(s)?;
