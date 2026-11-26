@@ -40,7 +40,7 @@
         inherit (pkgs) lib;
 
         # Keep the Nix toolchain aligned with the crate's MSRV and edition.
-        rustVersion = "1.86.0";
+        rustVersion = "1.88.0";
         stableToolchain = pkgs.rust-bin.stable."${rustVersion}".default;
         stableToolchainWithLLvmTools = pkgs.rust-bin.stable."${rustVersion}".default.override {
           extensions = ["rust-src" "llvm-tools"];
