@@ -151,6 +151,48 @@ fn ignores_osc_and_other_non_sgr_sequences() {
 }
 
 #[test]
+/// OSC 8 hyperlinks are dropped but their text is kept, whichever terminator they use.
+fn osc_terminated_by_st_or_bel_keeps_surrounding_text() {
+    let expected = Text::from(Line::from(vec![
+        Span::raw("pre "),
+        Span::raw("LINK"),
+        Span::raw(" post"),
+    ]));
+    test_both(
+        b"pre \x1b]8;;https://a.b\x1b\\LINK\x1b]8;;\x1b\\ post",
+        expected.clone(),
+    );
+    test_both(
+        b"pre \x1b]8;;https://a.b\x07LINK\x1b]8;;\x07 post",
+        expected,
+    );
+}
+
+#[test]
+/// An ESC that is not part of ST aborts the OSC and starts a new escape sequence, as in xterm.
+fn osc_aborted_by_escape_sequence_keeps_following_text() {
+    let output = Text::from(Line::from(vec![Span::raw("a"), "red".red()]));
+    test_both(b"a\x1b]0;title\x1b[31mred", output);
+}
+
+#[test]
+/// An unterminated OSC, or one cut off by a trailing ESC, is dropped without losing earlier text.
+fn unterminated_osc_at_end_of_input_is_dropped() {
+    test_both(b"hi\x1b]0;title", Text::raw("hi"));
+    test_both(b"hi\x1b]0;title\x1b", Text::raw("hi"));
+}
+
+#[test]
+/// The active style carries across an ST-terminated OSC 8 hyperlink.
+fn style_is_kept_across_st_terminated_hyperlink() {
+    let output = Text::from(Line::from(vec!["pre ".red(), "LINK".red(), " post".red()]));
+    test_both(
+        b"\x1b[31mpre \x1b]8;;https://a.b\x1b\\LINK\x1b]8;;\x1b\\ post",
+        output,
+    );
+}
+
+#[test]
 fn unknown_sgr_codes_are_ignored_and_chained_items_still_apply() {
     let bytes: Vec<u8> = b"\x1b[200;31mred".to_vec();
     let output = Text::from("red".red());
