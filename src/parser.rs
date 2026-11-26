@@ -4,7 +4,7 @@ use nom::{
     branch::alt,
     bytes::complete::*,
     character::complete::*,
-    combinator::{map_res, opt},
+    combinator::{map_res, opt, recognize},
     multi::*,
     sequence::{delimited, preceded},
 };
@@ -271,7 +271,10 @@ fn any_escape_sequence(s: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
     // Attempt to consume most escape codes, including a single escape char.
     //
     // Most escape codes begin with ESC[ and are terminated by an alphabetic character,
-    // but OSC codes begin with ESC] and are terminated by an ascii bell (\x07) or ST (ESC \)
+    // but OSC codes begin with ESC] and are terminated by an ascii bell (\x07) or ST (ESC \),
+    // as are the other control strings (DCS ESC P, SOS ESC X, PM ESC ^, APC ESC _),
+    // other codes are ESC, optional intermediate bytes (0x20-0x2F) and one final byte (0x30-0x7E),
+    // e.g. ESC 7, ESC =, ESC ( B or a stray ST,
     // and a truncated/invalid code may just be a standalone ESC or not be terminated.
     //
     // We should try to consume as much of it as possible to match behavior of most terminals;
@@ -282,10 +285,14 @@ fn any_escape_sequence(s: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
         opt(alt((
             delimited(char('['), take_till(AsChar::is_alpha), opt(take(1u8))),
             delimited(
-                char(']'),
+                one_of("]PX^_"),
                 take_till(|c| c == b'\x07' || c == b'\x1b'),
                 opt(alt((tag("\x07"), tag("\x1b\\")))),
             ),
+            recognize((
+                take_while(|c| (0x20..=0x2f).contains(&c)),
+                take_while_m_n(1, 1, |c| (0x30..=0x7e).contains(&c)),
+            )),
         ))),
     )
     .parse(s)?;

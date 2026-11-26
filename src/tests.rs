@@ -193,6 +193,50 @@ fn style_is_kept_across_st_terminated_hyperlink() {
 }
 
 #[test]
+/// Escape sequences other than CSI and OSC are dropped whole, not just their ESC.
+fn drops_short_escape_sequences_without_leaking_their_bytes() {
+    let abc = Text::from(Line::from(vec![
+        Span::raw("a"),
+        Span::raw("b"),
+        Span::raw("c"),
+    ]));
+    test_both(b"a\x1b7b\x1b8c", abc.clone());
+    test_both(b"a\x1b=b\x1b>c", abc.clone());
+    test_both(b"a\x1b(Bb\x1b)0c", abc);
+    test_both(
+        b"a\x1b\\b",
+        Text::from(Line::from(vec![Span::raw("a"), Span::raw("b")])),
+    );
+}
+
+#[test]
+/// DCS, SOS, PM and APC strings are dropped with their payload, like OSC.
+fn drops_control_strings_with_their_payload() {
+    let ab = Text::from(Line::from(vec![Span::raw("a"), Span::raw("b")]));
+    test_both(b"a\x1bPq#0;2;0;0;0\x1b\\b", ab.clone());
+    test_both(b"a\x1bXsos\x1b\\b", ab.clone());
+    test_both(b"a\x1b^pm\x1b\\b", ab.clone());
+    test_both(b"a\x1b_Gf=100;AAAA\x1b\\b", ab);
+}
+
+#[test]
+/// A short escape aborting an OSC, consecutive ESCs, and the active style surviving a short escape.
+fn short_escape_edge_cases() {
+    test_both(
+        b"A\x1b]0;t\x1b7Z",
+        Text::from(Line::from(vec![Span::raw("A"), Span::raw("Z")])),
+    );
+    test_both(
+        b"a\x1b\x1b7b",
+        Text::from(Line::from(vec![Span::raw("a"), Span::raw("b")])),
+    );
+    test_both(
+        b"\x1b[31ma\x1b7b",
+        Text::from(Line::from(vec!["a".red(), "b".red()])),
+    );
+}
+
+#[test]
 fn unknown_sgr_codes_are_ignored_and_chained_items_still_apply() {
     let bytes: Vec<u8> = b"\x1b[200;31mred".to_vec();
     let output = Text::from("red".red());
