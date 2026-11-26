@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.0.0](https://github.com/ratatui/ansi-to-tui/compare/v8.0.1...v9.0.0) - 2026-11-26
+
+### Fixed
+
+- *(parser)* drop short escape sequences and control strings whole ([#91](https://github.com/ratatui/ansi-to-tui/pull/91))
+- *(parser)* accept ST as OSC terminator ([#90](https://github.com/ratatui/ansi-to-tui/pull/90))
+- *(parser)* [**breaking**] make styles composable with a base style ([#88](https://github.com/ratatui/ansi-to-tui/pull/88))
+
+### Other
+
+- *(deps)* require patched dependencies ([#89](https://github.com/ratatui/ansi-to-tui/pull/89))
+
 ## [8.0.1](https://github.com/ratatui/ansi-to-tui/compare/v8.0.0...v8.0.1) - 2026-01-10
 
 ### Fixed
